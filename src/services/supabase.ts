@@ -11,21 +11,16 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 /**
- * Dynamically resolve computer's local Wi-Fi IP address for physical mobile devices running Expo Go
+ * Default to active VPS domain URL http://api-liferoutine.kingslityc.com.br
  */
-const getLocalHostIp = (): string => {
-  try {
-    const hostUri = Constants.expoConfig?.hostUri;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      return `http://${ip}:4000`;
-    }
-  } catch (e) {}
-  return 'http://localhost:4000';
+const getActiveApiUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_BACKEND_API_URL) {
+    return process.env.EXPO_PUBLIC_BACKEND_API_URL;
+  }
+  return 'http://api-liferoutine.kingslityc.com.br';
 };
 
-export const BACKEND_API_URL =
-  process.env.EXPO_PUBLIC_BACKEND_API_URL || getLocalHostIp();
+export const BACKEND_API_URL = getActiveApiUrl();
 
 export const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
@@ -48,6 +43,7 @@ export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
  * Test health connection of Docker backend API and PostgreSQL DB
  */
 export async function checkBackendHealth(): Promise<{ online: boolean; dbConnected: boolean; message: string }> {
+  // 1. Try active production VPS domain
   try {
     const res = await fetch(`${BACKEND_API_URL}/health`);
     if (res.ok) {
@@ -55,24 +51,25 @@ export async function checkBackendHealth(): Promise<{ online: boolean; dbConnect
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Docker Online (${BACKEND_API_URL})! PostgreSQL: ${data.database}`,
+        message: `Servidor Oracle VPS Online (${BACKEND_API_URL})! PostgreSQL: ${data.database}`,
       };
     }
-  } catch (error) {
-    // Fallback to localhost if hostUri fails
-    try {
-      const fallbackRes = await fetch('http://localhost:4000/health');
-      if (fallbackRes.ok) {
-        const data = await fallbackRes.json();
-        return {
-          online: true,
-          dbConnected: data.database === 'connected',
-          message: `Servidor Docker Online! PostgreSQL: ${data.database}`,
-        };
-      }
-    } catch (e) {}
-  }
+  } catch (error) {}
 
+  // 2. Try localhost fallback
+  try {
+    const fallbackRes = await fetch('http://localhost:4000/health');
+    if (fallbackRes.ok) {
+      const data = await fallbackRes.json();
+      return {
+        online: true,
+        dbConnected: data.database === 'connected',
+        message: `Servidor Docker Local Online! PostgreSQL: ${data.database}`,
+      };
+    }
+  } catch (e) {}
+
+  // 3. Try Supabase fallback
   try {
     const resSupabase = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       headers: { apikey: SUPABASE_ANON_KEY },

@@ -45,6 +45,19 @@ services:
       - default
       - proxy
 
+  # 🖥️ Adminer Web Database Manager (Visual Web Dashboard for PostgreSQL)
+  adminer:
+    image: adminer:latest
+    container_name: liferoutine_adminer
+    restart: always
+    ports:
+      - '8085:8080'
+    depends_on:
+      - postgres
+    networks:
+      - default
+      - proxy
+
 networks:
   default:
   proxy:

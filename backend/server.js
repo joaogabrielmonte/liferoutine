@@ -34,6 +34,107 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Web Admin Dashboard
+app.get('/admin', async (req, res) => {
+  try {
+    const usersRes = await pool.query('SELECT id, name, email, wake_time, sleep_time, created_at FROM users ORDER BY created_at DESC');
+    const habitsRes = await pool.query('SELECT count(*) FROM habits');
+    const logsRes = await pool.query('SELECT count(*) FROM habit_logs');
+
+    const users = usersRes.rows;
+    const totalHabits = habitsRes.rows[0]?.count || 0;
+    const totalLogs = logsRes.rows[0]?.count || 0;
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>LifeRoutine - Web Admin Dashboard</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body { background: #0F172A; color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; padding: 2rem; }
+          .card-custom { background: #1E293B; border: 1px solid #334155; border-radius: 12px; }
+          .table-custom { color: #F8FAFC; }
+          .table-custom th { background: #334155; color: #38BDF8; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2>⚡ LifeRoutine - Painel de Controle Web</h2>
+            <span class="badge bg-success p-2">PostgreSQL Online</span>
+          </div>
+
+          <div class="row g-4 mb-4">
+            <div class="col-md-4">
+              <div class="card card-custom p-3 text-center">
+                <h6 class="text-secondary">Usuários Cadastrados</h6>
+                <h1 class="text-info font-weight-bold">${users.length}</h1>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-custom p-3 text-center">
+                <h6 class="text-secondary">Hábitos Registrados</h6>
+                <h1 class="text-warning font-weight-bold">${totalHabits}</h1>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-custom p-3 text-center">
+                <h6 class="text-secondary">Logs de Conclusão</h6>
+                <h1 class="text-success font-weight-bold">${totalLogs}</h1>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-custom p-4">
+            <h4 class="mb-3 text-primary">👥 Relação de Usuários Mobile</h4>
+            <div class="table-responsive">
+              <table class="table table-custom table-hover">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Acorda às</th>
+                    <th>Dorme às</th>
+                    <th>Data de Cadastro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    users.length === 0
+                      ? '<tr><td colspan="5" class="text-center text-muted">Nenhum usuário cadastrado via mobile ainda.</td></tr>'
+                      : users
+                          .map(
+                            (u) => `
+                        <tr>
+                          <td><strong>${u.name}</strong></td>
+                          <td>${u.email}</td>
+                          <td><span class="badge bg-warning text-dark">${u.wake_time || '07:00'}</span></td>
+                          <td><span class="badge bg-secondary">${u.sleep_time || '23:00'}</span></td>
+                          <td><small class="text-muted">${new Date(u.created_at).toLocaleString('pt-BR')}</small></td>
+                        </tr>
+                      `
+                          )
+                          .join('')
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.send(html);
+  } catch (error) {
+    console.error('Admin panel error:', error);
+    res.status(500).send('Erro ao carregar o painel web admin.');
+  }
+});
+
 // Auth Routes
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, wakeTime, sleepTime } = req.body;
