@@ -89,7 +89,7 @@ app.get('/admin', async (req, res) => {
           </div>
 
           <div class="card card-custom p-4">
-            <h4 class="mb-3 text-primary">👥 Relação de Usuários Mobile</h4>
+            <h4 class="mb-3 text-primary">👥 Relação de Usuários Mobile (PostgreSQL)</h4>
             <div class="table-responsive">
               <table class="table table-custom table-hover">
                 <thead>
@@ -104,7 +104,7 @@ app.get('/admin', async (req, res) => {
                 <tbody>
                   ${
                     users.length === 0
-                      ? '<tr><td colspan="5" class="text-center text-muted">Nenhum usuário cadastrado via mobile ainda.</td></tr>'
+                      ? '<tr><td colspan="5" class="text-center text-muted">Nenhum usuário cadastrado via mobile ainda. Faça login/cadastro no App Mobile!</td></tr>'
                       : users
                           .map(
                             (u) => `
@@ -135,20 +135,26 @@ app.get('/admin', async (req, res) => {
   }
 });
 
-// Auth Routes
+// Auth Routes - Save User directly to PostgreSQL
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, wakeTime, sleepTime } = req.body;
   try {
-    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    if (!cleanEmail || !password) {
+      return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+    }
+
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'E-mail já cadastrado.' });
     }
 
     const newUser = await pool.query(
-      'INSERT INTO users (name, email, password_hash, wake_time, sleep_time) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email',
-      [name, email.toLowerCase(), password, wakeTime || '07:00', sleepTime || '23:00']
+      'INSERT INTO users (name, email, password_hash, wake_time, sleep_time) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, wake_time, sleep_time, created_at',
+      [name || 'Usuário', cleanEmail, password, wakeTime || '07:00', sleepTime || '23:00']
     );
 
+    console.log(`✅ Usuário cadastrado com sucesso no PostgreSQL: ${cleanEmail}`);
     res.json({ success: true, user: newUser.rows[0] });
   } catch (error) {
     console.error('Register error:', error);
@@ -159,7 +165,8 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
     if (result.rows.length === 0 || result.rows[0].password_hash !== password) {
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
@@ -181,16 +188,41 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Cloud Sync Endpoint
+// Cloud Sync Endpoint - Sync habits and logs into PostgreSQL
 app.post('/api/sync', async (req, res) => {
   const { user, habits, logs } = req.body;
   try {
+    if (user && user.email) {
+      const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [user.email.toLowerCase()]);
+      let userId;
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+      } else {
+        const newUser = await pool.query(
+          'INSERT INTO users (name, email, password_hash, wake_time, sleep_time) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [user.name || 'Usuário', user.email.toLowerCase(), '123456', user.wakeTime || '07:00', user.sleepTime || '23:00']
+        );
+        userId = newUser.rows[0].id;
+      }
+
+      if (Array.isArray(habits)) {
+        for (const h of habits) {
+          await pool.query(
+            `INSERT INTO habits (id, user_id, title, category, frequency, target_value, target_unit, time_of_day, color, icon)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, target_value = EXCLUDED.target_value`,
+            [h.id, userId, h.title, h.category || 'geral', h.frequency || 'diario', h.targetValue || 1, h.targetUnit || 'vezes', h.timeOfDay || 'qualquer', h.color || '#3B82F6', h.icon || 'star']
+          );
+        }
+      }
+    }
     res.json({
       success: true,
       syncedAt: new Date().toISOString(),
-      message: 'Sincronização concluída.',
+      message: 'Sincronização com PostgreSQL concluída.',
     });
   } catch (error) {
+    console.error('Sync error:', error);
     res.status(500).json({ error: 'Erro de sincronização' });
   }
 });

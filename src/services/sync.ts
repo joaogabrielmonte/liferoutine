@@ -1,9 +1,9 @@
-import { checkBackendHealth, type SyncStatus } from '@/services/supabase';
+import { checkBackendHealth, BACKEND_API_URL, type SyncStatus } from '@/services/supabase';
 import { useHabitsStore } from '@/stores/useHabitsStore';
 import { getUserProfile } from '@/services/storage';
 
 /**
- * Hybrid Sync Manager: SQLite Offline-First -> Cloud Sync
+ * Hybrid Sync Manager: SQLite Offline-First -> Cloud Sync (PostgreSQL)
  */
 export class SyncManager {
   private static status: SyncStatus = 'synced';
@@ -41,7 +41,18 @@ export class SyncManager {
         syncedAt: new Date().toISOString(),
       };
 
-      console.log('[SyncManager] Sincronizado com backend:', payload.syncedAt);
+      // Push payload to PostgreSQL via API
+      const response = await fetch(`${BACKEND_API_URL}/api/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha no servidor ao sincronizar.');
+      }
+
+      console.log('[SyncManager] Sincronização com PostgreSQL efetuada com sucesso!');
 
       this.status = 'synced';
       return {

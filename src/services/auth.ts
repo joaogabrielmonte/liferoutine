@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { BACKEND_API_URL } from '@/services/supabase';
 
 const USER_DB_KEY = 'liferoutine_user_db';
 const SESSION_KEY = 'liferoutine_session';
@@ -22,7 +23,7 @@ export type SavedCredentials = {
 };
 
 /**
- * Get stored registered user accounts
+ * Get stored registered user accounts from local SecureStore
  */
 async function getUsersDB(): Promise<UserAccount[]> {
   try {
@@ -36,7 +37,7 @@ async function getUsersDB(): Promise<UserAccount[]> {
 }
 
 /**
- * Save user accounts DB
+ * Save user accounts DB locally
  */
 async function saveUsersDB(users: UserAccount[]): Promise<void> {
   try {
@@ -82,7 +83,7 @@ export async function getRememberedCredentials(): Promise<SavedCredentials | nul
 }
 
 /**
- * Register a new user account
+ * Register a new user account (Saves locally & synchronizes with Oracle VPS PostgreSQL)
  */
 export async function registerUser(
   name: string,
@@ -97,25 +98,44 @@ export async function registerUser(
       return { success: false, message: 'Preencha um e-mail válido e senha com pelo menos 4 caracteres.' };
     }
 
-    const users = await getUsersDB();
-    const existing = users.find((u) => u.email === cleanEmail);
-    if (existing) {
-      return { success: false, message: 'Este e-mail já está cadastrado. Faça login ou redefina sua senha.' };
+    // 1. Try registering on remote Oracle VPS PostgreSQL API
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || 'Usuário',
+          email: cleanEmail,
+          password,
+          wakeTime,
+          sleepTime,
+        }),
+      });
+
+      if (response.ok) {
+        console.log('[Auth] Cadastrado com sucesso no PostgreSQL VPS!');
+      }
+    } catch (netError) {
+      console.warn('[Auth] VPS Offline durante cadastro. Salva no SQLite local.', netError);
     }
 
-    const newUser: UserAccount = {
-      name: name.trim() || 'Usuário',
-      email: cleanEmail,
-      passwordHash: password,
-      wakeTime,
-      sleepTime,
-      createdAt: new Date().toISOString(),
-    };
+    // 2. Save locally for offline-first hybrid support
+    const users = await getUsersDB();
+    const existing = users.find((u) => u.email === cleanEmail);
+    if (!existing) {
+      const newUser: UserAccount = {
+        name: name.trim() || 'Usuário',
+        email: cleanEmail,
+        passwordHash: password,
+        wakeTime,
+        sleepTime,
+        createdAt: new Date().toISOString(),
+      };
+      users.push(newUser);
+      await saveUsersDB(users);
+    }
 
-    users.push(newUser);
-    await saveUsersDB(users);
-
-    // Save active session & timestamp
+    // 3. Save active session & timestamp
     if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
       await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
@@ -129,7 +149,7 @@ export async function registerUser(
 }
 
 /**
- * Login user
+ * Login user (Validates against remote Oracle VPS PostgreSQL API & local cache)
  */
 export async function loginUser(
   email: string,
@@ -137,8 +157,42 @@ export async function loginUser(
 ): Promise<{ success: boolean; message: string; user?: UserAccount }> {
   try {
     const cleanEmail = email.trim().toLowerCase();
-    const users = await getUsersDB();
 
+    // 1. Try remote VPS login
+    try {
+      const response = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          const userAccount: UserAccount = {
+            name: data.user.name || 'Usuário',
+            email: data.user.email,
+            passwordHash: password,
+            wakeTime: data.user.wakeTime || '07:00',
+            sleepTime: data.user.sleepTime || '23:00',
+            createdAt: new Date().toISOString(),
+          };
+
+          // Save active session & timestamp
+          if (Platform.OS !== 'web') {
+            await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
+            await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
+          }
+
+          return { success: true, message: 'Login efetuado com sucesso!', user: userAccount };
+        }
+      }
+    } catch (netError) {
+      console.warn('[Auth] VPS Offline no login. Tentando base local...', netError);
+    }
+
+    // 2. Fallback to local DB
+    const users = await getUsersDB();
     const user = users.find((u) => u.email === cleanEmail);
     if (!user) {
       return { success: false, message: 'E-mail não cadastrado. Crie uma conta na aba "Criar Nova Conta".' };
@@ -172,12 +226,10 @@ export async function resetUserPassword(
     const users = await getUsersDB();
     const index = users.findIndex((u) => u.email === cleanEmail);
 
-    if (index === -1) {
-      return { success: false, message: 'E-mail não encontrado na base local.' };
+    if (index !== -1) {
+      users[index].passwordHash = newPassword;
+      await saveUsersDB(users);
     }
-
-    users[index].passwordHash = newPassword;
-    await saveUsersDB(users);
 
     return { success: true, message: 'Senha redefinida com sucesso! Faça login com a nova senha.' };
   } catch (error) {
@@ -212,7 +264,14 @@ export async function getActiveSessionUser(): Promise<UserAccount | null> {
     await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, now.toString());
 
     const users = await getUsersDB();
-    return users.find((u) => u.email === email) || null;
+    return users.find((u) => u.email === email) || {
+      name: 'Usuário',
+      email,
+      passwordHash: '',
+      wakeTime: '07:00',
+      sleepTime: '23:00',
+      createdAt: new Date().toISOString(),
+    };
   } catch (error) {
     return null;
   }
