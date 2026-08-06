@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 
 const USER_DB_KEY = 'liferoutine_user_db';
 const SESSION_KEY = 'liferoutine_session';
+const SESSION_TIMESTAMP_KEY = 'liferoutine_session_timestamp';
+const SAVED_CREDENTIALS_KEY = 'liferoutine_saved_credentials';
 
 export type UserAccount = {
   name: string;
@@ -11,6 +13,12 @@ export type UserAccount = {
   wakeTime: string;
   sleepTime: string;
   createdAt: string;
+};
+
+export type SavedCredentials = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
 };
 
 /**
@@ -40,6 +48,40 @@ async function saveUsersDB(users: UserAccount[]): Promise<void> {
 }
 
 /**
+ * Save or clear remembered login credentials
+ */
+export async function saveRememberedCredentials(
+  email: string,
+  password: string,
+  rememberMe: boolean
+): Promise<void> {
+  try {
+    if (Platform.OS === 'web') return;
+    if (rememberMe) {
+      const creds: SavedCredentials = { email, password, rememberMe: true };
+      await SecureStore.setItemAsync(SAVED_CREDENTIALS_KEY, JSON.stringify(creds));
+    } else {
+      await SecureStore.deleteItemAsync(SAVED_CREDENTIALS_KEY);
+    }
+  } catch (error) {
+    console.warn('Failed to save remembered credentials:', error);
+  }
+}
+
+/**
+ * Get remembered login credentials
+ */
+export async function getRememberedCredentials(): Promise<SavedCredentials | null> {
+  try {
+    if (Platform.OS === 'web') return null;
+    const json = await SecureStore.getItemAsync(SAVED_CREDENTIALS_KEY);
+    return json ? JSON.parse(json) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * Register a new user account
  */
 export async function registerUser(
@@ -64,7 +106,7 @@ export async function registerUser(
     const newUser: UserAccount = {
       name: name.trim() || 'Usuário',
       email: cleanEmail,
-      passwordHash: password, // local encrypted store
+      passwordHash: password,
       wakeTime,
       sleepTime,
       createdAt: new Date().toISOString(),
@@ -73,9 +115,10 @@ export async function registerUser(
     users.push(newUser);
     await saveUsersDB(users);
 
-    // Save active session
+    // Save active session & timestamp
     if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
+      await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
     }
 
     return { success: true, message: 'Cadastro realizado com sucesso!' };
@@ -96,26 +139,9 @@ export async function loginUser(
     const cleanEmail = email.trim().toLowerCase();
     const users = await getUsersDB();
 
-    // Default seed fallback if DB is empty
-    if (users.length === 0 && cleanEmail === 'gabriel@liferoutine.com') {
-      const demoUser: UserAccount = {
-        name: 'Gabriel',
-        email: 'gabriel@liferoutine.com',
-        passwordHash: password || '123456',
-        wakeTime: '07:00',
-        sleepTime: '23:00',
-        createdAt: new Date().toISOString(),
-      };
-      await saveUsersDB([demoUser]);
-      if (Platform.OS !== 'web') {
-        await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
-      }
-      return { success: true, message: 'Login efetuado com sucesso!', user: demoUser };
-    }
-
     const user = users.find((u) => u.email === cleanEmail);
     if (!user) {
-      return { success: false, message: 'E-mail não encontrado. Crie uma conta no cadastro.' };
+      return { success: false, message: 'E-mail não cadastrado. Crie uma conta na aba "Criar Nova Conta".' };
     }
 
     if (user.passwordHash !== password) {
@@ -124,6 +150,7 @@ export async function loginUser(
 
     if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
+      await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
     }
 
     return { success: true, message: 'Login efetuado com sucesso!', user };
@@ -146,7 +173,7 @@ export async function resetUserPassword(
     const index = users.findIndex((u) => u.email === cleanEmail);
 
     if (index === -1) {
-      return { success: false, message: 'E-mail não encontrado na nossa base local.' };
+      return { success: false, message: 'E-mail não encontrado na base local.' };
     }
 
     users[index].passwordHash = newPassword;
@@ -160,13 +187,29 @@ export async function resetUserPassword(
 }
 
 /**
- * Get active session user
+ * Get active session user with 30-minute expiration check
  */
 export async function getActiveSessionUser(): Promise<UserAccount | null> {
   try {
     if (Platform.OS === 'web') return null;
     const email = await SecureStore.getItemAsync(SESSION_KEY);
-    if (!email) return null;
+    const timestampStr = await SecureStore.getItemAsync(SESSION_TIMESTAMP_KEY);
+
+    if (!email || !timestampStr) return null;
+
+    const lastActive = parseInt(timestampStr, 10);
+    const now = Date.now();
+    const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+
+    // Check if session has expired (> 30 minutes of inactivity)
+    if (now - lastActive > THIRTY_MINUTES_MS) {
+      console.log('[Auth] Sessão expirou (mais de 30 min inativo).');
+      await logoutUser();
+      return null;
+    }
+
+    // Refresh activity timestamp
+    await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, now.toString());
 
     const users = await getUsersDB();
     return users.find((u) => u.email === email) || null;
@@ -182,6 +225,7 @@ export async function logoutUser(): Promise<void> {
   try {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync(SESSION_KEY);
+      await SecureStore.deleteItemAsync(SESSION_TIMESTAMP_KEY);
     }
   } catch (error) {
     console.warn('Logout error:', error);

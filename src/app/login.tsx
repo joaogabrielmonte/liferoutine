@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -10,10 +10,12 @@ import {
   Alert,
   Modal,
   Pressable,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { AppText } from '@/components/atoms/AppText';
@@ -22,7 +24,8 @@ import {
   loginUser,
   registerUser,
   resetUserPassword,
-  getActiveSessionUser,
+  saveRememberedCredentials,
+  getRememberedCredentials,
 } from '@/services/auth';
 import { saveUserProfile, DEFAULT_PROFILE } from '@/services/storage';
 import { Radius, Spacing, Shadow } from '@/constants/theme';
@@ -34,29 +37,79 @@ export default function LoginScreen() {
   // Mode: 'login' | 'signup'
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
 
-  // Form Fields
-  const [email, setEmail] = useState('gabriel@liferoutine.com');
-  const [password, setPassword] = useState('123456');
-  const [name, setName] = useState('Gabriel');
-  const [confirmPassword, setConfirmPassword] = useState('123456');
+  // Form Fields (Empty default on clean start)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Signup fields
+  const [name, setName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [wakeTime, setWakeTime] = useState('07:00');
   const [sleepTime, setSleepTime] = useState('23:00');
+
+  // Biometrics & Saved credentials state
+  const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
 
   // Forgot Password Modal state
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  React.useEffect(() => {
-    async function loadSavedUser() {
-      const user = await getActiveSessionUser();
-      if (user) {
-        setEmail(user.email);
-        setName(user.name);
+  useEffect(() => {
+    async function checkBiometricsAndSavedCreds() {
+      try {
+        // Check hardware biometrics support
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        setHasBiometrics(compatible && enrolled);
+
+        // Check if user previously saved credentials
+        const creds = await getRememberedCredentials();
+        if (creds) {
+          setEmail(creds.email);
+          setPassword(creds.password);
+          setRememberMe(true);
+          setHasSavedCredentials(true);
+        }
+      } catch (e) {
+        console.warn('Biometric check error:', e);
       }
     }
-    loadSavedUser();
+    checkBiometricsAndSavedCreds();
   }, []);
+
+  const handleBiometricAuth = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Autenticação Biométrica LifeRoutine',
+        fallbackLabel: 'Usar Senha',
+        cancelLabel: 'Cancelar',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        const creds = await getRememberedCredentials();
+        if (creds && creds.email && creds.password) {
+          const res = await loginUser(creds.email, creds.password);
+          if (res.success && res.user) {
+            await saveUserProfile({
+              ...DEFAULT_PROFILE,
+              name: res.user.name || 'Usuário',
+              wakeTime: res.user.wakeTime || wakeTime,
+              sleepTime: res.user.sleepTime || sleepTime,
+            });
+            router.replace('/(tabs)');
+            return;
+          }
+        }
+        Alert.alert('Sucesso', 'Biometria confirmada! Informe sua senha para o primeiro acesso.');
+      }
+    } catch (error) {
+      Alert.alert('Biometria Indisponível', 'Não foi possível ler a digital.');
+    }
+  };
 
   const handleLoginSubmit = async () => {
     if (!email || !password) {
@@ -66,6 +119,7 @@ export default function LoginScreen() {
 
     const res = await loginUser(email, password);
     if (res.success && res.user) {
+      await saveRememberedCredentials(email, password, rememberMe);
       await saveUserProfile({
         ...DEFAULT_PROFILE,
         name: res.user.name || name || 'Gabriel',
@@ -91,6 +145,7 @@ export default function LoginScreen() {
 
     const res = await registerUser(name, email, password, wakeTime, sleepTime);
     if (res.success) {
+      await saveRememberedCredentials(email, password, rememberMe);
       await saveUserProfile({
         ...DEFAULT_PROFILE,
         name,
@@ -243,24 +298,54 @@ export default function LoginScreen() {
                     style={[styles.input, { color: colors.text }]}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Sua senha"
+                    placeholder="Digite sua senha"
                     placeholderTextColor={colors.textTertiary}
                     secureTextEntry
                   />
                 </View>
 
-                {/* Forgot Password Trigger */}
-                <TouchableOpacity
-                  style={styles.forgotBtn}
-                  onPress={() => {
-                    setResetEmail(email);
-                    setIsResetModalOpen(true);
-                  }}
-                >
-                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: '700' }}>
-                    Esqueceu a senha? Redefinir aqui
-                  </AppText>
-                </TouchableOpacity>
+                {/* Save Password Toggle */}
+                <View style={styles.rememberRow}>
+                  <View style={styles.rememberLeft}>
+                    <Switch
+                      value={rememberMe}
+                      onValueChange={setRememberMe}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor="#FFFFFF"
+                    />
+                    <AppText variant="caption" color="textSecondary" style={{ marginLeft: 6 }}>
+                      Salvar senha no celular
+                    </AppText>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setResetEmail(email);
+                      setIsResetModalOpen(true);
+                    }}
+                  >
+                    <AppText variant="caption" style={{ color: colors.primary, fontWeight: '700' }}>
+                      Esqueceu a senha?
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Biometrics Login Button (Fingerprint / Face ID) */}
+                {hasBiometrics && (
+                  <TouchableOpacity
+                    style={[
+                      styles.biometricBtn,
+                      { backgroundColor: `${colors.primary}15`, borderColor: colors.primary },
+                    ]}
+                    onPress={handleBiometricAuth}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="finger-print" size={24} color={colors.primary} />
+                    <AppText style={{ color: colors.primary, fontWeight: '700', marginLeft: 8 }}>
+                      Entrar com Biometria / Digital
+                    </AppText>
+                  </TouchableOpacity>
+                )}
 
                 {/* Submit Login */}
                 <View style={{ marginTop: Spacing.md }}>
@@ -539,9 +624,24 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginTop: Spacing.xs,
   },
-  forgotBtn: {
-    alignSelf: 'flex-end',
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: Spacing.sm,
+  },
+  rememberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  biometricBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    marginTop: Spacing.md,
   },
   skipBtn: {
     marginVertical: Spacing.xl,
