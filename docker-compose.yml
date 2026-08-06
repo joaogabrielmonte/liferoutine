@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 🐘 PostgreSQL Database (Production Cloud / Self-Hosted DB)
+  postgres:
+    image: postgres:16-alpine
+    container_name: liferoutine_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: liferoutine
+      POSTGRES_USER: liferoutine_user
+      POSTGRES_PASSWORD: liferoutine_secure_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  # ⚡ Redis Queue & Cache (Push Notifications & Rate Limiting)
+  redis:
+    image: redis:7-alpine
+    container_name: liferoutine_redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  # 🚀 Node.js Express Backend API Service
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: liferoutine_api
+    restart: always
+    ports:
+      - '4000:4000'
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://liferoutine_user:liferoutine_secure_password@postgres:5432/liferoutine
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: liferoutine_jwt_secret_key_2026
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
