@@ -11,13 +11,13 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 /**
- * Default to active VPS domain URL http://api-liferoutine.kingslityc.com.br
+ * Default to active Oracle VPS IP http://147.15.72.151:4000 or custom domain
  */
 const getActiveApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_BACKEND_API_URL) {
     return process.env.EXPO_PUBLIC_BACKEND_API_URL;
   }
-  return 'http://api-liferoutine.kingslityc.com.br';
+  return 'http://147.15.72.151:4000';
 };
 
 export const BACKEND_API_URL = getActiveApiUrl();
@@ -43,7 +43,7 @@ export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
  * Test health connection of Docker backend API and PostgreSQL DB
  */
 export async function checkBackendHealth(): Promise<{ online: boolean; dbConnected: boolean; message: string }> {
-  // 1. Try active production VPS domain
+  // 1. Try active production VPS IP / domain
   try {
     const res = await fetch(`${BACKEND_API_URL}/health`);
     if (res.ok) {
