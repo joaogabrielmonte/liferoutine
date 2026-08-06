@@ -19,7 +19,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.kingthebest.LifeRoutine"
+      "package": "com.kingthebest.LifeRoutine",
+      "usesCleartextTraffic": true,
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
     },
     "web": {
       "output": "static",
@@ -37,7 +39,8 @@
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-local-authentication"
     ],
     "experiments": {
       "typedRoutes": true
