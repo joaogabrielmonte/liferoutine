@@ -21,8 +21,6 @@ services:
     image: redis:7-alpine
     container_name: liferoutine_redis
     restart: always
-    ports:
-      - '6379:6379'
     volumes:
       - redis_data:/data
 
@@ -43,6 +41,14 @@ services:
     depends_on:
       - postgres
       - redis
+    networks:
+      - default
+      - proxy
+
+networks:
+  default:
+  proxy:
+    external: true
 
 volumes:
   postgres_data:
