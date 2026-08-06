@@ -11,13 +11,13 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 /**
- * Default to active Oracle VPS IP http://147.15.72.151:4000 or custom domain
+ * Active Oracle VPS HTTPS SSL API URL
  */
 const getActiveApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_BACKEND_API_URL) {
     return process.env.EXPO_PUBLIC_BACKEND_API_URL;
   }
-  return 'http://147.15.72.151:4000';
+  return 'https://api-liferoutine.kingslityc.com.br';
 };
 
 export const BACKEND_API_URL = getActiveApiUrl();
@@ -43,7 +43,7 @@ export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
  * Test health connection of Docker backend API and PostgreSQL DB
  */
 export async function checkBackendHealth(): Promise<{ online: boolean; dbConnected: boolean; message: string }> {
-  // 1. Try active production VPS IP / domain
+  // 1. Try active HTTPS production VPS domain
   try {
     const res = await fetch(`${BACKEND_API_URL}/health`);
     if (res.ok) {
@@ -51,20 +51,20 @@ export async function checkBackendHealth(): Promise<{ online: boolean; dbConnect
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Oracle VPS Online (${BACKEND_API_URL})! PostgreSQL: ${data.database}`,
+        message: `Servidor Oracle VPS HTTPS Online (${BACKEND_API_URL})! PostgreSQL: ${data.database}`,
       };
     }
   } catch (error) {}
 
-  // 2. Try localhost fallback
+  // 2. Try HTTP VPS IP fallback
   try {
-    const fallbackRes = await fetch('http://localhost:4000/health');
-    if (fallbackRes.ok) {
-      const data = await fallbackRes.json();
+    const fallbackIpRes = await fetch('http://147.15.72.151:4000/health');
+    if (fallbackIpRes.ok) {
+      const data = await fallbackIpRes.json();
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Docker Local Online! PostgreSQL: ${data.database}`,
+        message: `Servidor Oracle VPS IP Online! PostgreSQL: ${data.database}`,
       };
     }
   } catch (e) {}
