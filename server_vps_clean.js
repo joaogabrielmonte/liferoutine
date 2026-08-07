@@ -331,6 +331,16 @@ app.get('/admin', async (req, res) => {
 });
 
 // Auth Routes - Save User directly to PostgreSQL
+app.get('/api/auth/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, email, wake_time as "wakeTime", sleep_time as "sleepTime", created_at as "createdAt" FROM users ORDER BY created_at DESC');
+    res.json({ success: true, users: result.rows });
+  } catch (error) {
+    console.error('Fetch users error:', error);
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+});
+
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, wakeTime, sleepTime } = req.body;
   try {
