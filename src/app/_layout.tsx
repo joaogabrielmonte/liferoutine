@@ -4,15 +4,16 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, LogBox } from 'react-native';
+import { useColorScheme, LogBox, Platform } from 'react-native';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useHabitsStore } from '@/stores/useHabitsStore';
 
-// Ignore harmless Expo Go remote push notification deprecation warning (we use 100% local notifications)
-LogBox.ignoreLogs([
-  'expo-notifications: Android Push notifications',
-  'functionality provided by expo-notifications was removed from Expo Go',
-]);
+if (Platform.OS !== 'web') {
+  LogBox.ignoreLogs([
+    'expo-notifications: Android Push notifications',
+    'functionality provided by expo-notifications was removed from Expo Go',
+  ]);
+}
 
 export default function RootLayout() {
   const systemScheme = useColorScheme();
