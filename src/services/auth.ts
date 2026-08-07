@@ -110,7 +110,7 @@ export async function getRememberedCredentials(): Promise<SavedCredentials | nul
 }
 
 /**
- * Register a new user account (Saves locally & synchronizes with Oracle VPS PostgreSQL)
+ * Register a new user account (Oracle VPS PostgreSQL only — SQLite fallback DISABLED)
  */
 export async function registerUser(
   name: string,
@@ -127,18 +127,10 @@ export async function registerUser(
       return { success: false, message: 'Preencha um e-mail válido e senha com pelo menos 4 caracteres.' };
     }
 
-    const newUserAccount: UserAccount = {
-      name: cleanName,
-      email: cleanEmail,
-      passwordHash: password,
-      wakeTime,
-      sleepTime,
-      createdAt: new Date().toISOString(),
-    };
-
-    // 1. Try registering on remote Oracle VPS PostgreSQL API
+    // Register ONLY on remote Oracle VPS PostgreSQL — no SQLite fallback
+    let response: Response;
     try {
-      const response = await fetch(`${BACKEND_API_URL}/api/auth/register`, {
+      response = await fetch(`${BACKEND_API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -149,32 +141,47 @@ export async function registerUser(
           sleepTime,
         }),
       });
-
-      if (response.ok) {
-        console.log('[Auth] Cadastrado com sucesso no PostgreSQL VPS!');
-      }
     } catch (netError) {
-      console.warn('[Auth] VPS Offline durante cadastro. Salva no SQLite local.', netError);
+      console.warn('[Auth] Sem conexão com o servidor VPS:', netError);
+      return { success: false, message: '❌ Sem conexão com o servidor. Verifique sua internet e tente novamente.' };
     }
 
-    // 2. Save locally for offline-first hybrid support
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn('[Auth] Erro no cadastro VPS:', errorBody);
+      return { success: false, message: 'Erro ao cadastrar no servidor. Tente novamente.' };
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return { success: false, message: data.error || 'Erro ao cadastrar usuário.' };
+    }
+
+    // Save session locally after successful VPS registration
+    const newUserAccount: UserAccount = {
+      name: cleanName,
+      email: cleanEmail,
+      passwordHash: password,
+      wakeTime,
+      sleepTime,
+      createdAt: new Date().toISOString(),
+    };
     await syncLocalAccountAndProfile(newUserAccount);
 
-    // 3. Save active session & timestamp
     if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
       await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
     }
 
-    return { success: true, message: 'Cadastro realizado com sucesso!' };
+    return { success: true, message: '✅ Cadastro realizado com sucesso no servidor!' };
   } catch (error) {
     console.warn('Register error:', error);
-    return { success: false, message: 'Erro ao cadastrar usuário.' };
+    return { success: false, message: 'Erro inesperado ao cadastrar usuário.' };
   }
 }
 
 /**
- * Login user (Validates against remote Oracle VPS PostgreSQL API & local cache)
+ * Login user (Oracle VPS PostgreSQL only — SQLite fallback DISABLED)
  */
 export async function loginUser(
   email: string,
@@ -183,61 +190,47 @@ export async function loginUser(
   try {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Try remote VPS login
+    // Login ONLY against remote VPS — no SQLite fallback
+    let response: Response;
     try {
-      const response = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
+      response = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, password }),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          const userAccount: UserAccount = {
-            name: data.user.name || 'Usuário',
-            email: data.user.email,
-            passwordHash: password,
-            wakeTime: data.user.wakeTime || '07:00',
-            sleepTime: data.user.sleepTime || '23:00',
-            createdAt: new Date().toISOString(),
-          };
-
-          // Sync locally
-          await syncLocalAccountAndProfile(userAccount);
-
-          // Save active session & timestamp
-          if (Platform.OS !== 'web') {
-            await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
-            await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
-          }
-
-          return { success: true, message: 'Login efetuado com sucesso!', user: userAccount };
-        }
-      }
     } catch (netError) {
-      console.warn('[Auth] VPS Offline no login. Tentando base local...', netError);
+      console.warn('[Auth] Sem conexão com o servidor VPS:', netError);
+      return { success: false, message: '❌ Sem conexão com o servidor. Verifique sua internet e tente novamente.' };
     }
 
-    // 2. Fallback to local DB
-    const users = await getUsersDB();
-    const user = users.find((u) => u.email === cleanEmail);
-    if (!user) {
-      return { success: false, message: 'E-mail não cadastrado. Crie uma conta na aba "Criar Nova Conta".' };
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.user) {
+        const userAccount: UserAccount = {
+          name: data.user.name || 'Usuário',
+          email: data.user.email,
+          passwordHash: password,
+          wakeTime: data.user.wakeTime || '07:00',
+          sleepTime: data.user.sleepTime || '23:00',
+          createdAt: new Date().toISOString(),
+        };
+
+        await syncLocalAccountAndProfile(userAccount);
+
+        if (Platform.OS !== 'web') {
+          await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
+          await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
+        }
+
+        return { success: true, message: '✅ Login efetuado com sucesso!', user: userAccount };
+      }
+
+      // Server responded but login failed (wrong credentials)
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, message: errorData.error || 'E-mail ou senha incorretos.' };
     }
 
-    if (user.passwordHash !== password) {
-      return { success: false, message: 'Senha incorreta. Tente novamente ou redefina sua senha.' };
-    }
-
-    await syncLocalAccountAndProfile(user);
-
-    if (Platform.OS !== 'web') {
-      await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
-      await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
-    }
-
-    return { success: true, message: 'Login efetuado com sucesso!', user };
+    return { success: false, message: 'Erro ao conectar com o servidor. Tente novamente.' };
   } catch (error) {
     console.warn('Login error:', error);
     return { success: false, message: 'Erro ao efetuar login.' };
