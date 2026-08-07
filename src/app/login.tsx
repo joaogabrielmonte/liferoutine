@@ -48,6 +48,10 @@ export default function LoginScreen() {
   const [wakeTime, setWakeTime] = useState('07:00');
   const [sleepTime, setSleepTime] = useState('23:00');
 
+  // Password Visibility Toggle ("Olhinho")
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Biometrics & Saved credentials state
   const [hasBiometrics, setHasBiometrics] = useState(false);
   const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
@@ -300,8 +304,15 @@ export default function LoginScreen() {
                     onChangeText={setPassword}
                     placeholder="Digite sua senha"
                     placeholderTextColor={colors.textTertiary}
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                   />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Save Password Toggle */}
@@ -416,8 +427,15 @@ export default function LoginScreen() {
                     onChangeText={setPassword}
                     placeholder="Crie uma senha forte"
                     placeholderTextColor={colors.textTertiary}
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                   />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Confirm Password */}
@@ -432,8 +450,15 @@ export default function LoginScreen() {
                     onChangeText={setConfirmPassword}
                     placeholder="Repita a senha"
                     placeholderTextColor={colors.textTertiary}
-                    secureTextEntry
+                    secureTextEntry={!showConfirmPassword}
                   />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Wake / Sleep times */}
@@ -551,8 +576,15 @@ export default function LoginScreen() {
                 onChangeText={setNewPassword}
                 placeholder="Digite a nova senha"
                 placeholderTextColor={colors.textTertiary}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.modalButtonRow}>
