@@ -267,6 +267,83 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
   },
 }));
 
+/**
+ * Dynamically computes current streak and best streak from log history
+ */
+export function calculateHabitStreakStats(logs: HabitLog[], targetCount: number): { currentStreak: number; bestStreak: number } {
+  if (!logs || logs.length === 0) {
+    return { currentStreak: 0, bestStreak: 0 };
+  }
+
+  const completedDates = Array.from(
+    new Set(
+      logs
+        .filter((l) => l.completedCount >= targetCount)
+        .map((l) => l.date)
+    )
+  ).sort();
+
+  if (completedDates.length === 0) {
+    return { currentStreak: 0, bestStreak: 0 };
+  }
+
+  let maxStreak = 0;
+  let tempStreak = 0;
+  let prevDateObj: Date | null = null;
+
+  for (const dateStr of completedDates) {
+    const parts = dateStr.split('-').map(Number);
+    const currentDateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+
+    if (!prevDateObj) {
+      tempStreak = 1;
+    } else {
+      const diffMs = currentDateObj.getTime() - prevDateObj.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        tempStreak += 1;
+      } else if (diffDays > 1) {
+        tempStreak = 1;
+      }
+    }
+    maxStreak = Math.max(maxStreak, tempStreak);
+    prevDateObj = currentDateObj;
+  }
+
+  const todayStr = getTodayStr();
+  const todayParts = todayStr.split('-').map(Number);
+  const todayObj = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+
+  let currentStreak = 0;
+  let checkDate = new Date(todayObj);
+
+  const dateFormatted = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const completedSet = new Set(completedDates);
+
+  if (completedSet.has(dateFormatted(checkDate))) {
+    currentStreak += 1;
+    checkDate.setDate(checkDate.getDate() - 1);
+  } else {
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  while (completedSet.has(dateFormatted(checkDate))) {
+    currentStreak += 1;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  return {
+    currentStreak,
+    bestStreak: Math.max(maxStreak, currentStreak),
+  };
+}
+
 // Custom React hooks for guaranteed reactive updates bypassing React Compiler memoization
 export function useTodayHabits(): HabitWithLogs[] {
   const habits = useHabitsStore((state) => state.habits);
@@ -299,8 +376,12 @@ export function useTodayHabits(): HabitWithLogs[] {
       )
     ).length;
 
+    const streakStats = calculateHabitStreakStats(habitLogs, habit.targetCount);
+
     return {
       ...habit,
+      streak: Math.max(habit.streak || 0, streakStats.currentStreak),
+      bestStreak: Math.max(habit.bestStreak || 0, streakStats.bestStreak),
       logs: habitLogs,
       todayLog,
       isCompletedToday,

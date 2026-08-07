@@ -89,6 +89,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const todayHabits = useTodayHabits();
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [devTapCount, setDevTapCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -335,21 +336,17 @@ export default function ProfileScreen() {
             <SettingRow
               icon={
                 <Ionicons
-                  name="cloud-done-outline"
+                  name="download-outline"
                   size={18}
-                  color="#3B82F6"
+                  color="#22C55E"
                 />
               }
-              iconBg="rgba(59, 130, 246, 0.15)"
-              label="Testar Conexão Docker & PostgreSQL"
-              subtitle="Sincronizar dados do SQLite com a nuvem"
+              iconBg="rgba(34, 197, 94, 0.15)"
+              label="Exportar Backup dos Dados (JSON)"
+              subtitle="Salvar cópia dos dados salvos no SQLite"
               isLast
               onPress={async () => {
-                const res = await SyncManager.syncLocalToCloud();
-                Alert.alert(
-                  res.success ? 'Conexão Docker & Nuvem OK! 🚀' : 'Modo Offline (SQLite)',
-                  res.message
-                );
+                await exportDataJSON();
               }}
             />
           </AppCard>
@@ -437,14 +434,31 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
-        <AppText
-          variant="caption"
-          color="textTertiary"
-          align="center"
-          style={{ marginTop: Spacing.xl }}
+        {/* Hidden Developer Mode on 5 Taps */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={async () => {
+            const next = devTapCount + 1;
+            setDevTapCount(next);
+            if (next >= 5) {
+              setDevTapCount(0);
+              const res = await SyncManager.syncLocalToCloud();
+              Alert.alert(
+                res.success ? '🛠️ Modo Dev: Nuvem & Docker OK! 🚀' : '🛠️ Modo Dev: Offline',
+                res.message
+              );
+            }
+          }}
         >
-          LifeRoutine v1.0.0 • Expo SDK 54
-        </AppText>
+          <AppText
+            variant="caption"
+            color="textTertiary"
+            align="center"
+            style={{ marginTop: Spacing.xl }}
+          >
+            LifeRoutine v1.0.0 • Expo SDK 54
+          </AppText>
+        </TouchableOpacity>
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>

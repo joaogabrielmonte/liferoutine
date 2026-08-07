@@ -48,17 +48,17 @@ export default function StatsScreen() {
   const completion = useTodayCompletion();
   const completedToday = habits.filter((h) => h.isCompletedToday).length;
 
-  const avgStreak =
+  const currentStreak =
     habits.length > 0
-      ? Math.round(
-          habits.reduce((acc, h) => acc + h.streak, 0) / habits.length
-        )
+      ? Math.max(...habits.map((h) => h.streak || 0))
       : 0;
 
-  const bestStreak = habits.reduce(
-    (max, h) => Math.max(max, h.bestStreak),
-    0
-  );
+  const bestStreak =
+    habits.length > 0
+      ? Math.max(...habits.map((h) => h.bestStreak || h.streak || 0))
+      : 0;
+
+  const totalCompletionsCount = logs.filter((l) => l.completedCount > 0).length;
 
   return (
     <SafeAreaView
@@ -73,7 +73,7 @@ export default function StatsScreen() {
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <AppText variant="h2">Progresso & Estatísticas</AppText>
           <AppText variant="caption" color="textSecondary">
-            Sua constância e conquistas diárias
+            Sua constância, recordes e conquistas diárias
           </AppText>
         </Animated.View>
 
@@ -106,25 +106,25 @@ export default function StatsScreen() {
         >
           <StatCard
             icon={
-              <MaterialCommunityIcons name="fire" size={20} color="#F59E0B" />
+              <MaterialCommunityIcons name="fire" size={22} color="#F59E0B" />
             }
-            label="SEQUÊNCIA"
-            value={`${avgStreak} dias`}
-            subtitle="média atual"
+            label="SEQUÊNCIA ATUAL"
+            value={`${currentStreak} ${currentStreak === 1 ? 'dia' : 'dias'}`}
+            subtitle="dias seguidos"
             color="#F59E0B"
           />
           <View style={{ width: Spacing.sm }} />
           <StatCard
             icon={
               <MaterialCommunityIcons
-                name="medal-outline"
-                size={20}
+                name="trophy-award"
+                size={22}
                 color="#8B5CF6"
               />
             }
-            label="RECORDE"
-            value={`${bestStreak} dias`}
-            subtitle="melhor sequência"
+            label="RECORDE MÁXIMO"
+            value={`${bestStreak} ${bestStreak === 1 ? 'dia' : 'dias'}`}
+            subtitle="maior sequência"
             color="#8B5CF6"
           />
         </Animated.View>
@@ -138,27 +138,27 @@ export default function StatsScreen() {
             icon={
               <MaterialCommunityIcons
                 name="target"
-                size={20}
+                size={22}
                 color={colors.primary}
               />
             }
-            label="HÁBITOS"
+            label="HÁBITOS ATIVOS"
             value={`${habits.length}`}
-            subtitle="ativos hoje"
+            subtitle="programados hoje"
             color={colors.primary}
           />
           <View style={{ width: Spacing.sm }} />
           <StatCard
             icon={
               <Ionicons
-                name="trending-up-outline"
-                size={20}
+                name="checkmark-done-circle-outline"
+                size={22}
                 color="#22C55E"
               />
             }
-            label="CONCLUÍDOS"
-            value={`${completedToday}`}
-            subtitle="hoje"
+            label="TOTAL REGISTRADO"
+            value={`${totalCompletionsCount}`}
+            subtitle="conclusões no total"
             color="#22C55E"
           />
         </Animated.View>

@@ -69,16 +69,17 @@ export function ArcSliderCounter({
   ).current;
 
   const handleTouch = (touchX: number, touchY: number) => {
-    // Calculate angle relative to center (cx, cy)
+    // Calculate angle relative to arc center (cx, cy)
     const dx = touchX - cx;
-    const dy = cy - touchY; // inverted Y
+    const dy = cy - touchY; // inverted Y (top half is positive dy)
 
     let angleRad = Math.atan2(dy, dx);
     if (angleRad < 0) {
+      // If dragged below the horizontal baseline, snap to nearest end (left=0% or right=100%)
       angleRad = dx < 0 ? Math.PI : 0;
     }
 
-    // Angle goes from Math.PI (left = 0%) to 0 (right = 100%)
+    // Arc goes from Math.PI (left = 0%) to 0 (right = 100%)
     const clampedAngle = Math.max(0, Math.min(Math.PI, angleRad));
     const newRatio = 1 - clampedAngle / Math.PI;
     const calculatedValue = Math.round(newRatio * max);
