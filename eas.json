@@ -12,10 +12,16 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_API_URL": "https://api-liferoutine.kingslityc.com.br"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_API_URL": "https://api-liferoutine.kingslityc.com.br"
+      }
     }
   },
   "submit": {
