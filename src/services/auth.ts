@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { BACKEND_API_URL } from '@/services/supabase';
+import { saveUserProfile, getUserProfile } from '@/services/storage';
 
 const USER_DB_KEY = 'liferoutine_user_db';
 const SESSION_KEY = 'liferoutine_session';
@@ -45,6 +46,32 @@ async function saveUsersDB(users: UserAccount[]): Promise<void> {
     await SecureStore.setItemAsync(USER_DB_KEY, JSON.stringify(users));
   } catch (error) {
     console.warn('Failed to save users DB:', error);
+  }
+}
+
+/**
+ * Helper to update local account cache and user profile
+ */
+async function syncLocalAccountAndProfile(user: UserAccount): Promise<void> {
+  try {
+    const users = await getUsersDB();
+    const index = users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
+    if (index !== -1) {
+      users[index] = { ...users[index], ...user };
+    } else {
+      users.push(user);
+    }
+    await saveUsersDB(users);
+
+    const currentProfile = await getUserProfile();
+    await saveUserProfile({
+      ...currentProfile,
+      name: user.name || 'Usuário',
+      wakeTime: user.wakeTime || '07:00',
+      sleepTime: user.sleepTime || '23:00',
+    });
+  } catch (err) {
+    console.warn('[Auth] Failed to sync local account & profile:', err);
   }
 }
 
@@ -94,9 +121,20 @@ export async function registerUser(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim() || 'Usuário';
+
     if (!cleanEmail || !password || password.length < 4) {
       return { success: false, message: 'Preencha um e-mail válido e senha com pelo menos 4 caracteres.' };
     }
+
+    const newUserAccount: UserAccount = {
+      name: cleanName,
+      email: cleanEmail,
+      passwordHash: password,
+      wakeTime,
+      sleepTime,
+      createdAt: new Date().toISOString(),
+    };
 
     // 1. Try registering on remote Oracle VPS PostgreSQL API
     try {
@@ -104,7 +142,7 @@ export async function registerUser(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim() || 'Usuário',
+          name: cleanName,
           email: cleanEmail,
           password,
           wakeTime,
@@ -120,20 +158,7 @@ export async function registerUser(
     }
 
     // 2. Save locally for offline-first hybrid support
-    const users = await getUsersDB();
-    const existing = users.find((u) => u.email === cleanEmail);
-    if (!existing) {
-      const newUser: UserAccount = {
-        name: name.trim() || 'Usuário',
-        email: cleanEmail,
-        passwordHash: password,
-        wakeTime,
-        sleepTime,
-        createdAt: new Date().toISOString(),
-      };
-      users.push(newUser);
-      await saveUsersDB(users);
-    }
+    await syncLocalAccountAndProfile(newUserAccount);
 
     // 3. Save active session & timestamp
     if (Platform.OS !== 'web') {
@@ -178,6 +203,9 @@ export async function loginUser(
             createdAt: new Date().toISOString(),
           };
 
+          // Sync locally
+          await syncLocalAccountAndProfile(userAccount);
+
           // Save active session & timestamp
           if (Platform.OS !== 'web') {
             await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
@@ -201,6 +229,8 @@ export async function loginUser(
     if (user.passwordHash !== password) {
       return { success: false, message: 'Senha incorreta. Tente novamente ou redefina sua senha.' };
     }
+
+    await syncLocalAccountAndProfile(user);
 
     if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
@@ -264,12 +294,18 @@ export async function getActiveSessionUser(): Promise<UserAccount | null> {
     await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, now.toString());
 
     const users = await getUsersDB();
-    return users.find((u) => u.email === email) || {
-      name: 'Usuário',
+    const foundUser = users.find((u) => u.email === email);
+    if (foundUser) {
+      return foundUser;
+    }
+
+    const currentProfile = await getUserProfile();
+    return {
+      name: currentProfile.name || 'Usuário',
       email,
       passwordHash: '',
-      wakeTime: '07:00',
-      sleepTime: '23:00',
+      wakeTime: currentProfile.wakeTime || '07:00',
+      sleepTime: currentProfile.sleepTime || '23:00',
       createdAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -285,6 +321,7 @@ export async function logoutUser(): Promise<void> {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync(SESSION_KEY);
       await SecureStore.deleteItemAsync(SESSION_TIMESTAMP_KEY);
+      await SecureStore.deleteItemAsync('liferoutine_user_profile');
     }
   } catch (error) {
     console.warn('Logout error:', error);

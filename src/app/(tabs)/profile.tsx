@@ -90,9 +90,11 @@ export default function ProfileScreen() {
   const todayHabits = useTodayHabits();
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
 
-  useEffect(() => {
-    getUserProfile().then(setProfile);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getUserProfile().then(setProfile);
+    }, [])
+  );
 
   const totalHabitsCount = todayHabits.length;
   const completedHabitsCount = todayHabits.filter((h) => h.isCompletedToday).length;

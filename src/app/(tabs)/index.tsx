@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useHabitsStore, useTodayHabits, useTodayCompletion } from '@/stores/useHabitsStore';
+import { getUserProfile } from '@/services/storage';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
 import { ProgressRing } from '@/components/molecules/ProgressRing';
@@ -25,13 +27,14 @@ import { GenericHabitCounterModal } from '@/components/organisms/GenericHabitCou
 import { Spacing, Palette } from '@/constants/theme';
 import type { HabitWithLogs } from '@/types/habit';
 
-function getGreeting(name: string = 'Gabriel'): string {
+function getGreeting(name?: string): string {
   const hour = new Date().getHours();
   let timeGreeting = 'Bom dia';
   if (hour >= 12 && hour < 18) timeGreeting = 'Boa tarde';
   if (hour >= 18 || hour < 5) timeGreeting = 'Boa noite';
 
-  return `${timeGreeting}, ${name}`;
+  const cleanName = name && name.trim() && name.trim() !== 'Usuário' ? name.trim() : '';
+  return cleanName ? `${timeGreeting}, ${cleanName}` : `${timeGreeting}!`;
 }
 
 function formatDate(dateObj?: Date): string {
@@ -55,6 +58,7 @@ function getTodayFormatted(): string {
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const { deleteHabit, archiveHabit, updateHabit } = useHabitsStore();
+  const [userName, setUserName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>(getTodayFormatted());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOptionHabit, setSelectedOptionHabit] = useState<HabitWithLogs | null>(null);
@@ -62,6 +66,16 @@ export default function HomeScreen() {
   const [activeWaterHabit, setActiveWaterHabit] = useState<HabitWithLogs | null>(null);
   const [activeExerciseHabit, setActiveExerciseHabit] = useState<HabitWithLogs | null>(null);
   const [activeGenericHabit, setActiveGenericHabit] = useState<HabitWithLogs | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getUserProfile().then((profile) => {
+        if (profile && profile.name) {
+          setUserName(profile.name);
+        }
+      });
+    }, [])
+  );
 
   const todayHabits = useTodayHabits();
   const completion = useTodayCompletion();
@@ -110,7 +124,7 @@ export default function HomeScreen() {
             <AppText variant="caption" color="textSecondary">
               {formatDate()}
             </AppText>
-            <AppText variant="h2">{getGreeting()}</AppText>
+            <AppText variant="h2">{getGreeting(userName)}</AppText>
           </View>
 
           <TouchableOpacity

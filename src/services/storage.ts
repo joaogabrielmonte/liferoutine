@@ -13,7 +13,7 @@ export type UserProfile = {
 const PROFILE_KEY = 'liferoutine_user_profile';
 
 export const DEFAULT_PROFILE: UserProfile = {
-  name: 'Gabriel',
+  name: 'Usuário',
   wakeTime: '07:00',
   sleepTime: '23:00',
   notificationsEnabled: true,
