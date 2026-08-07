@@ -224,13 +224,11 @@ export async function loginUser(
 
         return { success: true, message: '✅ Login efetuado com sucesso!', user: userAccount };
       }
-
-      // Server responded but login failed (wrong credentials)
-      const errorData = await response.json().catch(() => ({}));
-      return { success: false, message: errorData.error || 'E-mail ou senha incorretos.' };
     }
 
-    return { success: false, message: 'Erro ao conectar com o servidor. Tente novamente.' };
+    // Server responded with error status (e.g. 401 Incorrect password, 400 Bad request)
+    const errorData = await response.json().catch(() => ({}));
+    return { success: false, message: errorData.error || 'E-mail ou senha incorretos.' };
   } catch (error) {
     console.warn('Login error:', error);
     return { success: false, message: 'Erro ao efetuar login.' };
