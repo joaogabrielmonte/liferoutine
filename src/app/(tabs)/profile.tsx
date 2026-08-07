@@ -191,7 +191,14 @@ export default function ProfileScreen() {
               {[
                 { label: 'Hábitos Hoje', value: `${totalHabitsCount}` },
                 { label: 'Concluídos', value: `${completedHabitsCount}` },
-                { label: 'Sequência', value: '5 dias' },
+                {
+                  label: 'Sequência',
+                  value: `${
+                    todayHabits.length > 0
+                      ? Math.max(...todayHabits.map((h) => h.streak || 0))
+                      : 0
+                  } dias`,
+                },
               ].map(({ label, value }) => (
                 <View key={label} style={styles.miniStat}>
                   <AppText

@@ -55,8 +55,8 @@ const DEMO_HABITS: Habit[] = [
     reminderEnabled: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    streak: 5,
-    bestStreak: 12,
+    streak: 0,
+    bestStreak: 0,
   },
   {
     id: '2',
@@ -72,8 +72,8 @@ const DEMO_HABITS: Habit[] = [
     reminderEnabled: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    streak: 3,
-    bestStreak: 8,
+    streak: 0,
+    bestStreak: 0,
   },
   {
     id: '3',
@@ -89,8 +89,8 @@ const DEMO_HABITS: Habit[] = [
     reminderEnabled: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    streak: 7,
-    bestStreak: 7,
+    streak: 0,
+    bestStreak: 0,
   },
   {
     id: '4',
@@ -106,8 +106,8 @@ const DEMO_HABITS: Habit[] = [
     reminderEnabled: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    streak: 2,
-    bestStreak: 15,
+    streak: 0,
+    bestStreak: 0,
   },
 ];
 
@@ -380,8 +380,8 @@ export function useTodayHabits(): HabitWithLogs[] {
 
     return {
       ...habit,
-      streak: Math.max(habit.streak || 0, streakStats.currentStreak),
-      bestStreak: Math.max(habit.bestStreak || 0, streakStats.bestStreak),
+      streak: streakStats.currentStreak,
+      bestStreak: streakStats.bestStreak,
       logs: habitLogs,
       todayLog,
       isCompletedToday,
