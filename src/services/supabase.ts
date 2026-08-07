@@ -10,15 +10,15 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 /**
- * Active Oracle VPS Production API URL via port 80 (DNS accessible by all devices)
- * Uses kingslityc.com.br domain (has valid DNS) with /liferoutine path prefix
- * served by Nginx Proxy Manager as a reverse proxy to liferoutine_api:4000
+ * Active Oracle VPS Production API URL via HTTPS (SSL certificate from Let's Encrypt)
+ * kingslityc.com.br has valid DNS + SSL cert
+ * /liferoutine/ path proxied by Nginx to liferoutine_api:4000
  */
 const getActiveApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_BACKEND_API_URL) {
     return process.env.EXPO_PUBLIC_BACKEND_API_URL;
   }
-  return 'http://kingslityc.com.br/liferoutine';
+  return 'https://kingslityc.com.br/liferoutine';
 };
 
 export const BACKEND_API_URL = getActiveApiUrl();
@@ -44,7 +44,6 @@ export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
  * Test health connection of Docker backend API and PostgreSQL DB
  */
 export async function checkBackendHealth(): Promise<{ online: boolean; dbConnected: boolean; message: string }> {
-  // 1. Try active production VPS via kingslityc.com.br/liferoutine (port 80 - always open)
   try {
     const res = await fetch(`${BACKEND_API_URL}/health`);
     if (res.ok) {
@@ -57,7 +56,7 @@ export async function checkBackendHealth(): Promise<{ online: boolean; dbConnect
     }
   } catch (error) {}
 
-  // 2. Try direct IP fallback
+  // Fallback: try direct IP
   try {
     const fallbackRes = await fetch('http://147.15.72.151:4000/health');
     if (fallbackRes.ok) {
@@ -65,20 +64,10 @@ export async function checkBackendHealth(): Promise<{ online: boolean; dbConnect
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Oracle VPS IP Online! PostgreSQL: ${data.database}`,
+        message: `Servidor VPS IP Online! PostgreSQL: ${data.database}`,
       };
     }
   } catch (e) {}
-
-  // 3. Try Supabase fallback
-  try {
-    const resSupabase = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      headers: { apikey: SUPABASE_ANON_KEY },
-    });
-    if (resSupabase.ok || resSupabase.status === 401) {
-      return { online: true, dbConnected: true, message: 'Supabase Cloud Conectado!' };
-    }
-  } catch (error) {}
 
   return { online: false, dbConnected: false, message: 'Servidor Offline. Usando SQLite Local.' };
 }

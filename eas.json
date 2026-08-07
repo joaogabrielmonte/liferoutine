@@ -14,13 +14,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_API_URL": "http://kingslityc.com.br/liferoutine"
+        "EXPO_PUBLIC_BACKEND_API_URL": "https://kingslityc.com.br/liferoutine"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_BACKEND_API_URL": "http://kingslityc.com.br/liferoutine"
+        "EXPO_PUBLIC_BACKEND_API_URL": "https://kingslityc.com.br/liferoutine"
       }
     }
   },
