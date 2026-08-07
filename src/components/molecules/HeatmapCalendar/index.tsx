@@ -8,9 +8,10 @@ import type { HabitLog } from '@/types/habit';
 type HeatmapCalendarProps = {
   logs: HabitLog[];
   totalActiveHabitsCount: number;
+  onSelectDay?: (dateKey: string, dayNum: number) => void;
 };
 
-export function HeatmapCalendar({ logs, totalActiveHabitsCount }: HeatmapCalendarProps) {
+export function HeatmapCalendar({ logs, totalActiveHabitsCount, onSelectDay }: HeatmapCalendarProps) {
   const { colors, isDark } = useTheme();
 
   // Generate days for the current month (e.g. 30 days)
@@ -39,7 +40,7 @@ export function HeatmapCalendar({ logs, totalActiveHabitsCount }: HeatmapCalenda
       else intensity = 1;
     }
 
-    return { dayNum, dateKey, intensity };
+    return { dayNum, dateKey, intensity, completedCount };
   });
 
   const getCellColor = (intensity: number) => {
@@ -66,34 +67,36 @@ export function HeatmapCalendar({ logs, totalActiveHabitsCount }: HeatmapCalenda
           Consistência em {monthName}
         </AppText>
         <AppText variant="caption" color="textSecondary">
-          {daysInMonth} dias
+          Toque em um dia para ver o histórico
         </AppText>
       </View>
 
       <View style={styles.grid}>
-        {daysArray.map(({ dayNum, intensity }) => {
+        {daysArray.map(({ dayNum, dateKey, intensity }) => {
           const bg = getCellColor(intensity);
           const isToday = dayNum === today.getDate();
 
           return (
-            <View
+            <TouchableOpacity
               key={dayNum}
               style={[
                 styles.cell,
                 { backgroundColor: bg, borderColor: isToday ? colors.primary : 'transparent' },
                 isToday && styles.todayCell,
               ]}
+              onPress={() => onSelectDay && onSelectDay(dateKey, dayNum)}
+              activeOpacity={0.7}
             >
               <AppText
                 style={{
-                  fontSize: 10,
-                  fontWeight: isToday ? '800' : '600',
-                  color: intensity >= 3 ? '#FFFFFF' : colors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: isToday ? '800' : '700',
+                  color: intensity >= 3 ? '#FFFFFF' : colors.text,
                 }}
               >
                 {dayNum}
               </AppText>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>

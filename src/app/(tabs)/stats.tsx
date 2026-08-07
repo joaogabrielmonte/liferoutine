@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -7,9 +7,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { useHabitsStore, useTodayHabits, useTodayCompletion } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
+import { AppButton } from '@/components/atoms/AppButton';
 import { ProgressRing } from '@/components/molecules/ProgressRing';
 import { HeatmapCalendar } from '@/components/molecules/HeatmapCalendar';
-import { Spacing, Radius } from '@/constants/theme';
+import { Spacing, Radius, Shadow } from '@/constants/theme';
 import { HABIT_CATEGORIES, type HabitCategory } from '@/types/habit';
 
 type StatCardProps = {
@@ -48,6 +49,9 @@ export default function StatsScreen() {
   const completion = useTodayCompletion();
   const completedToday = habits.filter((h) => h.isCompletedToday).length;
 
+  const [selectedDateKey, setSelectedDateKey] = React.useState<string | null>(null);
+  const [selectedDayNum, setSelectedDayNum] = React.useState<number | null>(null);
+
   const currentStreak =
     habits.length > 0
       ? Math.max(...habits.map((h) => h.streak || 0))
@@ -59,6 +63,19 @@ export default function StatsScreen() {
       : 0;
 
   const totalCompletionsCount = logs.filter((l) => l.completedCount > 0).length;
+
+  // Selected Day Logs Breakdown
+  const selectedDayLogs = selectedDateKey
+    ? logs.filter((l) => l.date === selectedDateKey && l.completedCount > 0)
+    : [];
+
+  const formattedSelectedDate = selectedDateKey
+    ? (() => {
+        const parts = selectedDateKey.split('-').map(Number);
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      })()
+    : '';
 
   return (
     <SafeAreaView
@@ -166,7 +183,14 @@ export default function StatsScreen() {
         {/* Heatmap Calendar Section */}
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <AppCard style={styles.heatmapCard}>
-            <HeatmapCalendar logs={logs} totalActiveHabitsCount={habits.length} />
+            <HeatmapCalendar
+              logs={logs}
+              totalActiveHabitsCount={habits.length}
+              onSelectDay={(dateKey, dayNum) => {
+                setSelectedDateKey(dateKey);
+                setSelectedDayNum(dayNum);
+              }}
+            />
           </AppCard>
         </Animated.View>
 
@@ -216,6 +240,89 @@ export default function StatsScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
+
+      {/* Modal de Histórico do Dia Selecionado */}
+      <Modal
+        visible={!!selectedDateKey}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setSelectedDateKey(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedDateKey(null)} />
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalHeaderTitle}>
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <AppText variant="title" style={{ textTransform: 'capitalize' }}>
+                  Dia {selectedDayNum}
+                </AppText>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedDateKey(null)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={22} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={{ marginBottom: Spacing.md }}>
+              {formattedSelectedDate}
+            </AppText>
+
+            <AppText variant="label" style={{ marginBottom: Spacing.xs }}>
+              Hábitos Concluídos neste Dia ({selectedDayLogs.length}):
+            </AppText>
+
+            {selectedDayLogs.length === 0 ? (
+              <View style={styles.emptyDayBox}>
+                <Ionicons name="sunny-outline" size={32} color={colors.textTertiary} />
+                <AppText variant="caption" color="textSecondary" align="center" style={{ marginTop: 6 }}>
+                  Nenhum hábito foi concluído nesta data.
+                </AppText>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 220 }}>
+                {selectedDayLogs.map((log) => {
+                  const habitObj = habits.find((h) => h.id === log.habitId);
+                  const habitTitle = habitObj?.title || 'Hábito';
+                  const habitIcon = habitObj?.icon || 'checkmark-circle-outline';
+                  const habitColor = habitObj?.color || colors.primary;
+
+                  return (
+                    <View
+                      key={log.id}
+                      style={[
+                        styles.logItemRow,
+                        { backgroundColor: colors.background, borderColor: colors.border },
+                      ]}
+                    >
+                      <View style={[styles.logItemIcon, { backgroundColor: `${habitColor}22` }]}>
+                        <MaterialCommunityIcons name={habitIcon as any} size={18} color={habitColor} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <AppText variant="bodyMedium" style={{ fontWeight: '600' }}>
+                          {habitTitle}
+                        </AppText>
+                        <AppText variant="caption" color="textSecondary">
+                          {log.completedCount} {habitObj?.unit || 'vezes'}
+                        </AppText>
+                      </View>
+                      <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <View style={{ marginTop: Spacing.md, alignItems: 'flex-end' }}>
+              <AppButton label="Fechar" variant="primary" onPress={() => setSelectedDateKey(null)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -269,5 +376,55 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    padding: Spacing.base,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: Radius['2xl'],
+    padding: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.lg,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  modalHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  emptyDayBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  logItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  logItemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
