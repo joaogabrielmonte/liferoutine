@@ -1,10 +1,12 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 import type { Habit, HabitLog } from '@/types/habit';
 
 const DB_NAME = 'liferoutine.db';
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
 async function getDatabase(): Promise<SQLite.SQLiteDatabase | null> {
+  if (Platform.OS === 'web') return null;
   if (!dbInstance) {
     try {
       dbInstance = await SQLite.openDatabaseAsync(DB_NAME);
