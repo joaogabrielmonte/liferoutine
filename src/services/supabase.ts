@@ -10,13 +10,15 @@ export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 /**
- * Active Oracle VPS Production API URL
+ * Active Oracle VPS Production API URL via port 80 (DNS accessible by all devices)
+ * Uses kingslityc.com.br domain (has valid DNS) with /liferoutine path prefix
+ * served by Nginx Proxy Manager as a reverse proxy to liferoutine_api:4000
  */
 const getActiveApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_BACKEND_API_URL) {
     return process.env.EXPO_PUBLIC_BACKEND_API_URL;
   }
-  return 'http://147.15.72.151:4000';
+  return 'http://kingslityc.com.br/liferoutine';
 };
 
 export const BACKEND_API_URL = getActiveApiUrl();
@@ -42,7 +44,7 @@ export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
  * Test health connection of Docker backend API and PostgreSQL DB
  */
 export async function checkBackendHealth(): Promise<{ online: boolean; dbConnected: boolean; message: string }> {
-  // 1. Try active production VPS IP
+  // 1. Try active production VPS via kingslityc.com.br/liferoutine (port 80 - always open)
   try {
     const res = await fetch(`${BACKEND_API_URL}/health`);
     if (res.ok) {
@@ -50,20 +52,20 @@ export async function checkBackendHealth(): Promise<{ online: boolean; dbConnect
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Oracle VPS Online (${BACKEND_API_URL})! PostgreSQL: ${data.database}`,
+        message: `Servidor Oracle VPS Online! PostgreSQL: ${data.database}`,
       };
     }
   } catch (error) {}
 
-  // 2. Try domain fallback
+  // 2. Try direct IP fallback
   try {
-    const fallbackRes = await fetch('https://api-liferoutine.kingslityc.com.br/health');
+    const fallbackRes = await fetch('http://147.15.72.151:4000/health');
     if (fallbackRes.ok) {
       const data = await fallbackRes.json();
       return {
         online: true,
         dbConnected: data.database === 'connected',
-        message: `Servidor Oracle VPS Domínio Online! PostgreSQL: ${data.database}`,
+        message: `Servidor Oracle VPS IP Online! PostgreSQL: ${data.database}`,
       };
     }
   } catch (e) {}
