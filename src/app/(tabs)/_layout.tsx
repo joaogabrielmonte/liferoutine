@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
-import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, Image, Alert } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -8,7 +8,7 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
 import { getUserProfile, UserProfile } from '@/services/storage';
 import { logoutUser } from '@/services/auth';
-import { Shadow, Radius, Spacing } from '@/constants/theme';
+import { Shadow } from '@/constants/theme';
 
 function WebSidebarNav() {
   const { colors, isDark } = useTheme();
@@ -38,23 +38,23 @@ function WebSidebarNav() {
 
   const navSections = [
     {
-      title: 'PAINEL EXECUTIVE CRM',
+      title: 'PAINEL DE GESTÃO ERP',
       items: [
-        { name: 'index', title: 'Dashboard Executive', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
-        { name: 'users', title: 'Gestão de Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
+        { name: 'index', title: 'Visão Geral ERP', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
+        { name: 'users', title: 'Contas & Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
       ],
     },
     {
-      title: 'EXPERT TOOLS & BANCO',
+      title: 'BANCO DE DADOS & APIS',
       items: [
         { name: 'habits', title: 'Database Explorer', icon: 'server-outline', activeIcon: 'server', path: '/(tabs)/habits' },
-        { name: 'stats', title: 'Feature Flags & Recursos', icon: 'toggle-outline', activeIcon: 'toggle', path: '/(tabs)/stats' },
+        { name: 'stats', title: 'Feature Flags & Módulos', icon: 'toggle-outline', activeIcon: 'toggle', path: '/(tabs)/stats' },
       ],
     },
     {
-      title: 'INFRAESTRUTURA',
+      title: 'SERVIDORES & INFRA',
       items: [
-        { name: 'profile', title: 'Configurações VPS Oracle', icon: 'hardware-chip-outline', activeIcon: 'hardware-chip', path: '/(tabs)/profile' },
+        { name: 'profile', title: 'Infraestrutura VPS Oracle', icon: 'hardware-chip-outline', activeIcon: 'hardware-chip', path: '/(tabs)/profile' },
       ],
     },
   ];
@@ -68,8 +68,12 @@ function WebSidebarNav() {
         .toUpperCase()
     : 'GM';
 
+  const sidebarBg = isDark ? '#091E42' : '#FFFFFF';
+  const sidebarBorder = isDark ? '#253858' : '#DFE1E6';
+  const primaryColor = '#0052CC';
+
   return (
-    <View style={[styles.sidebar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+    <View style={[styles.sidebar, { backgroundColor: sidebarBg, borderColor: sidebarBorder }]}>
       {/* Brand Header with Official Mobile App Logo */}
       <View style={styles.sidebarBrand}>
         <Image
@@ -80,14 +84,14 @@ function WebSidebarNav() {
         <View style={{ flex: 1, marginLeft: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 15, letterSpacing: -0.2 }}>
-              LifeRoutine
+              LifeRoutine ERP
             </AppText>
-            <View style={[styles.crmPill, { backgroundColor: colors.primary }]}>
-              <AppText style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>CRM ADMIN</AppText>
+            <View style={[styles.crmPill, { backgroundColor: primaryColor }]}>
+              <AppText style={{ fontSize: 8, fontWeight: '700', color: '#FFFFFF' }}>ERP ADMIN</AppText>
             </View>
           </View>
           <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-            Command Center • Oracle VPS
+            Gestão Mobile • Oracle VPS
           </AppText>
         </View>
       </View>
@@ -113,9 +117,9 @@ function WebSidebarNav() {
                     styles.navItem,
                     {
                       backgroundColor: isSelected
-                        ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.08)')
+                        ? (isDark ? '#172B4D' : '#F4F5F7')
                         : 'transparent',
-                      borderLeftColor: isSelected ? colors.primary : 'transparent',
+                      borderLeftColor: isSelected ? primaryColor : 'transparent',
                     },
                   ]}
                   onPress={() => router.push(item.path as any)}
@@ -124,13 +128,13 @@ function WebSidebarNav() {
                   <Ionicons
                     name={(isSelected ? item.activeIcon : item.icon) as any}
                     size={16}
-                    color={isSelected ? colors.primary : colors.textSecondary}
+                    color={isSelected ? primaryColor : (isDark ? '#A5ADBA' : '#6B778C')}
                   />
                   <AppText
                     style={{
                       fontSize: 13,
                       fontWeight: isSelected ? '700' : '500',
-                      color: isSelected ? colors.text : colors.textSecondary,
+                      color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
                       marginLeft: 8,
                       flex: 1,
                     }}
@@ -145,10 +149,10 @@ function WebSidebarNav() {
       </View>
 
       {/* Footer Profile & Logout Button */}
-      <View style={[styles.sidebarFooter, { borderTopColor: colors.border }]}>
+      <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
         {/* Dynamic User Profile Card */}
-        <View style={[styles.crmProfileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+        <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
             <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>
               {userInitials}
             </AppText>
@@ -158,7 +162,7 @@ function WebSidebarNav() {
               {userProfile?.name || 'Gabriel Monte'}
             </AppText>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              {userProfile?.wakeTime ? `☀️ ${userProfile.wakeTime} • 🌙 ${userProfile.sleepTime || '23:00'}` : 'Super Admin'}
+              ⏳ Sessão: 30 min max
             </AppText>
           </View>
         </View>
@@ -166,29 +170,29 @@ function WebSidebarNav() {
         {/* Status & Theme Row */}
         <View style={styles.bottomStatusRow}>
           <View style={styles.statusIndicator}>
-            <View style={[styles.dotGreen, { backgroundColor: colors.success }]} />
-            <AppText style={{ fontSize: 11, fontWeight: '600', color: colors.success }}>
+            <View style={[styles.dotGreen, { backgroundColor: '#00875A' }]} />
+            <AppText style={{ fontSize: 11, fontWeight: '600', color: '#00875A' }}>
               PostgreSQL Online
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+            style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
           >
-            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={colors.icon} />
+            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
           </TouchableOpacity>
         </View>
 
-        {/* Botão de Sair (Logout Button) */}
+        {/* Botão de Sair do ERP */}
         <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: colors.dangerLight, borderColor: 'rgba(239, 68, 68, 0.3)' }]}
+          style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
-          <AppText style={{ fontSize: 13, fontWeight: '700', color: colors.danger, marginLeft: 6 }}>
-            Sair da Conta
+          <Ionicons name="log-out-outline" size={16} color="#DE350B" />
+          <AppText style={{ fontSize: 13, fontWeight: '700', color: '#DE350B', marginLeft: 6 }}>
+            Sair do ERP
           </AppText>
         </TouchableOpacity>
       </View>
