@@ -7,6 +7,7 @@ import {
   Switch,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,9 +30,8 @@ import {
   DEFAULT_PROFILE,
   type UserProfile,
 } from '@/services/storage';
-import { shareHabitReport, exportDataJSON } from '@/services/export';
-import { SyncManager } from '@/services/sync';
 import { logoutUser } from '@/services/auth';
+import { createSupportTicket } from '@/services/tickets';
 import { BACKEND_API_URL } from '@/services/supabase';
 import { Spacing, Radius } from '@/constants/theme';
 
@@ -94,6 +94,10 @@ export default function ProfileScreen() {
   const [devTapCount, setDevTapCount] = useState(0);
   const [vpsPing, setVpsPing] = useState<'online' | 'offline' | 'checking'>('online');
 
+  // Support Ticket Form State
+  const [ticketSubject, setTicketSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
+
   const isWeb = Platform.OS === 'web';
 
   useFocusEffect(
@@ -111,13 +115,29 @@ export default function ProfileScreen() {
       const res = await fetch(`${BACKEND_API_URL}/api/auth/users`).catch(() => null);
       if (res && res.ok) {
         setVpsPing('online');
-        alert('✅ Conexão VPS OK: Servidor Oracle (147.15.72.151) e PostgreSQL 16 operacionais!');
+        alert('Conexão VPS OK: Servidor Oracle (147.15.72.151) e PostgreSQL 16 operacionais!');
       } else {
         setVpsPing('offline');
-        alert('⚠️ Conexão de teste offline.');
+        alert('Conexão de teste offline.');
       }
     } catch (e) {
       setVpsPing('offline');
+    }
+  };
+
+  const handleCreateTicketSubmit = async () => {
+    if (!ticketSubject.trim() || !ticketMessage.trim()) {
+      Alert.alert('Atenção', 'Informe o assunto e a mensagem do chamado.');
+      return;
+    }
+
+    const res = await createSupportTicket(ticketSubject, ticketMessage);
+    if (res.success) {
+      setTicketSubject('');
+      setTicketMessage('');
+      Alert.alert('Chamado Enviado!', res.message);
+    } else {
+      Alert.alert('Erro', res.message);
     }
   };
 
@@ -127,7 +147,7 @@ export default function ProfileScreen() {
   if (isWeb) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
+        style={[styles.safe, { backgroundColor: isDark ? '#0B0F19' : '#F9FAFB' }]}
         edges={['top']}
       >
         <ScrollView
@@ -146,7 +166,7 @@ export default function ProfileScreen() {
           </Animated.View>
 
           {/* VPS Status Overview Card */}
-          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={[styles.vpsCard, { backgroundColor: cardBg, borderColor }]}>
+          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={[styles.vpsCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
             <View style={styles.vpsTopRow}>
               <View style={[styles.vpsIconBox, { backgroundColor: 'rgba(0, 135, 90, 0.1)' }]}>
                 <MaterialCommunityIcons name="server-security" size={24} color="#00875A" />
@@ -171,7 +191,7 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.vpsDetailsGrid}>
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>DOMÍNIO & SSL</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, color: '#00875A', marginTop: 2 }}>
                   https://kingslityc.com.br
@@ -181,7 +201,7 @@ export default function ProfileScreen() {
                 </AppText>
               </View>
 
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>REVERSE PROXY</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, marginTop: 2 }}>
                   Nginx Reverse Proxy
@@ -191,7 +211,7 @@ export default function ProfileScreen() {
                 </AppText>
               </View>
 
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>BANCO DE DADOS</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, color: '#0052CC', marginTop: 2 }}>
                   PostgreSQL 16 Engine
@@ -204,14 +224,14 @@ export default function ProfileScreen() {
           </Animated.View>
 
           {/* Infra Actions */}
-          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.vpsCard, { backgroundColor: cardBg, borderColor }]}>
+          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.vpsCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
             <AppText style={{ fontWeight: '700', fontSize: 14, marginBottom: 12 }}>
               Ações de Manutenção do Servidor
             </AppText>
 
             <View style={{ gap: 8 }}>
               <TouchableOpacity
-                style={[styles.btnRow, { borderColor }]}
+                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
                 onPress={() => alert('Logs Nginx verificados: 0 erros de HTTPS.')}
               >
                 <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
@@ -222,7 +242,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.btnRow, { borderColor }]}
+                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
                 onPress={() => alert('Backup do banco de dados gerado com sucesso.')}
               >
                 <Ionicons name="cloud-download-outline" size={16} color={colors.textSecondary} />
@@ -255,9 +275,9 @@ export default function ProfileScreen() {
     if (enabled) {
       const granted = await requestNotificationPermissions();
       if (granted) {
-        await scheduleHabitReminder('water-daily', 'Hora de beber água! 💧', 'Mantenha sua hidratação em dia.', 10, 0);
-        await scheduleHabitReminder('exercise-daily', 'Hora do seu treino! ⚡', 'Complete sua meta diária de exercícios.', 17, 0);
-        Alert.alert('Notificações Ativadas! 🔔', 'Você receberá lembretes diários para manter sua rotina.');
+        await scheduleHabitReminder('water-daily', 'Hora de beber água!', 'Mantenha sua hidratação em dia.', 10, 0);
+        await scheduleHabitReminder('exercise-daily', 'Hora do seu treino!', 'Complete sua meta diária de exercícios.', 17, 0);
+        Alert.alert('Notificações Ativadas!', 'Você receberá lembretes diários para manter sua rotina.');
       } else {
         Alert.alert('Permissão Necessária', 'Ative as permissões de notificação nas configurações do seu celular.');
       }
@@ -266,25 +286,58 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleDevTap = () => {
+    const next = devTapCount + 1;
+    setDevTapCount(next);
+    if (next >= 5) {
+      setDevTapCount(0);
+      router.push('/(tabs)/users');
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
+        {/* Header */}
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={styles.header}
+        >
           <AppText variant="h2">Perfil</AppText>
         </Animated.View>
 
+        {/* Profile Card */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <AppCard style={styles.profileCard} elevated>
-            <View style={[styles.avatar, { backgroundColor: colors.primaryLight }]}>
-              <Ionicons name="person" size={38} color={colors.primary} />
-            </View>
-            <AppText variant="title" align="center" style={{ marginTop: Spacing.md }}>
+            <TouchableOpacity activeOpacity={0.9} onPress={handleDevTap}>
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: colors.primaryLight },
+                ]}
+              >
+                <Ionicons name="person" size={38} color={colors.primary} />
+              </View>
+            </TouchableOpacity>
+
+            <AppText
+              variant="title"
+              align="center"
+              style={{ marginTop: Spacing.md }}
+            >
               {profile.name}
             </AppText>
             <AppText variant="caption" color="textSecondary" align="center">
               Acorda às {profile.wakeTime} • Dorme às {profile.sleepTime}
             </AppText>
 
+            {/* Mini Stats */}
             <View style={[styles.miniStats, { borderTopColor: colors.border }]}>
               {[
                 { label: 'Hábitos Hoje', value: `${totalHabitsCount}` },
@@ -295,7 +348,10 @@ export default function ProfileScreen() {
                 },
               ].map(({ label, value }) => (
                 <View key={label} style={styles.miniStat}>
-                  <AppText variant="subtitle" style={{ color: colors.primary, fontWeight: '700' }}>
+                  <AppText
+                    variant="subtitle"
+                    style={{ color: colors.primary, fontWeight: '700' }}
+                  >
                     {value}
                   </AppText>
                   <AppText variant="caption" color="textSecondary">
@@ -307,8 +363,13 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
+        {/* Preferences */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
-          <AppText variant="label" color="textSecondary" style={styles.sectionLabel}>
+          <AppText
+            variant="label"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
             Preferências da Conta
           </AppText>
           <AppCard>
@@ -316,7 +377,13 @@ export default function ProfileScreen() {
               icon={<Ionicons name="moon-outline" size={18} color="#8B5CF6" />}
               iconBg="rgba(139, 92, 246, 0.15)"
               label="Tema Escuro"
-              subtitle={settings.theme === 'system' ? 'Automático do Sistema' : isDark ? 'Ativo' : 'Inativo'}
+              subtitle={
+                settings.theme === 'system'
+                  ? 'Automático do Sistema'
+                  : isDark
+                  ? 'Ativo'
+                  : 'Inativo'
+              }
               right={
                 <Switch
                   value={isDark}
@@ -327,10 +394,20 @@ export default function ProfileScreen() {
               }
             />
             <SettingRow
-              icon={<Ionicons name="notifications-outline" size={18} color="#F59E0B" />}
+              icon={
+                <Ionicons
+                  name="notifications-outline"
+                  size={18}
+                  color="#F59E0B"
+                />
+              }
               iconBg="rgba(245, 158, 11, 0.15)"
               label="Lembretes Diários"
-              subtitle={settings.notificationsEnabled ? 'Ativos (10:00 e 17:00)' : 'Desativados'}
+              subtitle={
+                settings.notificationsEnabled
+                  ? 'Ativos (10:00 e 17:00)'
+                  : 'Desativados'
+              }
               right={
                 <Switch
                   value={settings.notificationsEnabled}
@@ -343,10 +420,72 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
+        {/* Support & Ticket Form Section - Directly rendered in Mobile Profile */}
+        <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+          <AppText
+            variant="label"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
+            Suporte & Atendimento
+          </AppText>
+          <AppCard style={{ padding: Spacing.base }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
+              <AppText style={{ fontWeight: '700', fontSize: 14 }}>
+                Enviar Chamado ao Administrador
+              </AppText>
+            </View>
+            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
+              Descreva sua dúvida ou problema técnico. O painel administrativo receberá seu chamado imediatamente.
+            </AppText>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text }]}
+                value={ticketSubject}
+                onChangeText={setTicketSubject}
+                placeholder="Ex: Problema de sincronização"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
+                value={ticketMessage}
+                onChangeText={setTicketMessage}
+                placeholder="Descreva o que está ocorrendo..."
+                placeholderTextColor={colors.textTertiary}
+                multiline
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.btnSubmitTicket, { backgroundColor: colors.primary }]}
+              onPress={handleCreateTicketSubmit}
+              activeOpacity={0.8}
+            >
+              <AppText style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                Enviar Chamado
+              </AppText>
+            </TouchableOpacity>
+          </AppCard>
+        </Animated.View>
+
+        {/* Logout Card */}
         <Animated.View entering={FadeInDown.delay(400).duration(400)}>
           <AppCard style={{ marginTop: Spacing.md }}>
             <SettingRow
-              icon={<Ionicons name="log-out-outline" size={18} color={colors.danger} />}
+              icon={
+                <Ionicons
+                  name="log-out-outline"
+                  size={18}
+                  color={colors.danger}
+                />
+              }
               iconBg={colors.dangerLight}
               label="Sair da Conta (Logout)"
               subtitle="Limpar sessão e solicitar credenciais ao abrir"
@@ -466,4 +605,27 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   rowText: { flex: 1 },
+  inputLabel: {
+    marginTop: 8,
+    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  inputBox: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  textInput: {
+    fontSize: 13,
+    paddingVertical: 8,
+  },
+  btnSubmitTicket: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
 });
