@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { BACKEND_API_URL } from '@/services/supabase';
-import { saveUserProfile, getUserProfile } from '@/services/storage';
+import { saveUserProfile, getUserProfile, DEFAULT_PROFILE } from '@/services/storage';
 
 const USER_DB_KEY = 'liferoutine_user_db';
 const SESSION_KEY = 'liferoutine_session';
@@ -106,11 +106,10 @@ async function syncLocalAccountAndProfile(user: UserAccount): Promise<void> {
     }
     await saveUsersDB(users);
     await saveUserProfile({
+      ...DEFAULT_PROFILE,
       name: user.name,
       wakeTime: user.wakeTime,
       sleepTime: user.sleepTime,
-      notificationsEnabled: true,
-      darkMode: true,
     });
   } catch (error) {
     console.warn('Failed to sync local account and profile:', error);
