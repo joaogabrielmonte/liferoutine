@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 export type UserProfile = {
   name: string;
@@ -27,23 +28,36 @@ export const DEFAULT_PROFILE: UserProfile = {
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   try {
     const jsonStr = JSON.stringify(profile);
-    await SecureStore.setItemAsync(PROFILE_KEY, jsonStr);
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.setItem(PROFILE_KEY, jsonStr);
+      } catch (e) {}
+    } else {
+      await SecureStore.setItemAsync(PROFILE_KEY, jsonStr);
+    }
   } catch (error) {
-    console.warn('Failed to save user profile to SecureStore:', error);
+    console.warn('Failed to save user profile:', error);
   }
 }
 
 /**
- * Load user profile from SecureStore
+ * Load user profile from storage
  */
 export async function getUserProfile(): Promise<UserProfile> {
   try {
-    const jsonStr = await SecureStore.getItemAsync(PROFILE_KEY);
+    let jsonStr: string | null = null;
+    if (Platform.OS === 'web') {
+      try {
+        jsonStr = localStorage.getItem(PROFILE_KEY);
+      } catch (e) {}
+    } else {
+      jsonStr = await SecureStore.getItemAsync(PROFILE_KEY);
+    }
     if (jsonStr) {
       return { ...DEFAULT_PROFILE, ...JSON.parse(jsonStr) };
     }
   } catch (error) {
-    console.warn('Failed to load user profile from SecureStore:', error);
+    console.warn('Failed to load user profile:', error);
   }
   return DEFAULT_PROFILE;
 }

@@ -26,11 +26,11 @@ export default function RootLayout() {
       : settings.theme;
 
   useEffect(() => {
-    // Hide the splash screen immediately — Expo Router calls preventAutoHideAsync
-    // internally so we MUST call hideAsync, otherwise the splash stays forever.
-    SplashScreen.hideAsync().catch(() => {});
+    if (Platform.OS !== 'web') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
 
-    // Load SQLite data in background (non-blocking)
+    // Load store data in background (non-blocking)
     loadStore();
   }, []);
 
