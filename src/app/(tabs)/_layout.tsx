@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
@@ -14,89 +14,136 @@ function WebSidebarNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const navItems = [
-    { name: 'index', title: 'Visão Geral', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
-    { name: 'users', title: 'Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
-    { name: 'habits', title: 'Hábitos', icon: 'checkbox-outline', activeIcon: 'checkbox', path: '/(tabs)/habits' },
-    { name: 'stats', title: 'Relatórios', icon: 'stats-chart-outline', activeIcon: 'stats-chart', path: '/(tabs)/stats' },
-    { name: 'profile', title: 'Configurações', icon: 'settings-outline', activeIcon: 'settings', path: '/(tabs)/profile' },
+  const navSections = [
+    {
+      title: 'PAINEL EXECUTIVE CRM',
+      items: [
+        { name: 'index', title: 'Dashboard Executive', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
+        { name: 'users', title: 'Gestão de Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
+      ],
+    },
+    {
+      title: 'EXPERT TOOLS & BANCO',
+      items: [
+        { name: 'habits', title: 'Database Explorer', icon: 'server-outline', activeIcon: 'server', path: '/(tabs)/habits' },
+        { name: 'stats', title: 'Feature Flags & Recursos', icon: 'toggle-outline', activeIcon: 'toggle', path: '/(tabs)/stats' },
+      ],
+    },
+    {
+      title: 'INFRAESTRUTURA',
+      items: [
+        { name: 'profile', title: 'Configurações VPS Oracle', icon: 'hardware-chip-outline', activeIcon: 'hardware-chip', path: '/(tabs)/profile' },
+      ],
+    },
   ];
 
+  const sidebarBg = isDark ? '#091E42' : '#FFFFFF';
+  const sidebarBorder = isDark ? '#253858' : '#DFE1E6';
+  const activeBg = isDark ? '#172B4D' : '#EB5A46';
+
   return (
-    <View style={[styles.sidebar, { backgroundColor: isDark ? '#09090B' : '#FFFFFF', borderColor: isDark ? '#27272A' : '#E4E4E7' }]}>
-      {/* Vercel-style Minimalist Brand Header */}
-      <View style={styles.sidebarHeader}>
-        <View style={[styles.logoDot, { backgroundColor: isDark ? '#FAFAFA' : '#09090B' }]}>
-          <Ionicons name="flash" size={14} color={isDark ? '#09090B' : '#FAFAFA'} />
+    <View style={[styles.sidebar, { backgroundColor: sidebarBg, borderColor: sidebarBorder }]}>
+      {/* Brand Header */}
+      <View style={styles.sidebarBrand}>
+        <View style={[styles.logoSquare, { backgroundColor: '#0052CC' }]}>
+          <MaterialCommunityIcons name="lightning-bolt" size={22} color="#FFFFFF" />
         </View>
-        <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, marginLeft: 8, letterSpacing: -0.2 }}>
-          LifeRoutine
-        </AppText>
-        <View style={[styles.adminBadge, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}>
-          <AppText style={{ fontSize: 10, fontWeight: '600', color: isDark ? '#A1A1AA' : '#71717A' }}>
-            Admin
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 15, letterSpacing: -0.2 }}>
+              LifeRoutine
+            </AppText>
+            <View style={styles.crmPill}>
+              <AppText style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>CRM ADMIN</AppText>
+            </View>
+          </View>
+          <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+            Command Center • Oracle VPS
           </AppText>
         </View>
       </View>
 
-      {/* Nav List */}
+      {/* Navigation Groups */}
       <View style={styles.navList}>
-        {navItems.map((item) => {
-          const isSelected =
-            item.name === 'index'
-              ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
-              : pathname.includes(item.name);
+        {navSections.map((section) => (
+          <View key={section.title} style={styles.navGroup}>
+            <AppText variant="caption" color="textTertiary" style={styles.groupHeader}>
+              {section.title}
+            </AppText>
 
-          return (
-            <TouchableOpacity
-              key={item.name}
-              style={[
-                styles.navItem,
-                {
-                  backgroundColor: isSelected
-                    ? isDark ? '#27272A' : '#F4F4F5'
-                    : 'transparent',
-                },
-              ]}
-              onPress={() => router.push(item.path as any)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={(isSelected ? item.activeIcon : item.icon) as any}
-                size={16}
-                color={isSelected ? (isDark ? '#FAFAFA' : '#09090B') : (isDark ? '#A1A1AA' : '#71717A')}
-              />
-              <AppText
-                style={{
-                  fontSize: 13,
-                  fontWeight: isSelected ? '600' : '500',
-                  color: isSelected ? (isDark ? '#FAFAFA' : '#09090B') : (isDark ? '#A1A1AA' : '#71717A'),
-                  marginLeft: 10,
-                  flex: 1,
-                }}
-              >
-                {item.title}
-              </AppText>
-            </TouchableOpacity>
-          );
-        })}
+            {section.items.map((item) => {
+              const isSelected =
+                item.name === 'index'
+                  ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
+                  : pathname.includes(item.name);
+
+              return (
+                <TouchableOpacity
+                  key={item.name}
+                  style={[
+                    styles.navItem,
+                    {
+                      backgroundColor: isSelected
+                        ? (isDark ? '#172B4D' : '#F4F5F7')
+                        : 'transparent',
+                      borderLeftColor: isSelected ? '#0052CC' : 'transparent',
+                    },
+                  ]}
+                  onPress={() => router.push(item.path as any)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={(isSelected ? item.activeIcon : item.icon) as any}
+                    size={16}
+                    color={isSelected ? '#0052CC' : (isDark ? '#A5ADBA' : '#6B778C')}
+                  />
+                  <AppText
+                    style={{
+                      fontSize: 13,
+                      fontWeight: isSelected ? '700' : '500',
+                      color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
+                      marginLeft: 8,
+                      flex: 1,
+                    }}
+                  >
+                    {item.title}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
 
-      {/* Footer Status */}
-      <View style={[styles.sidebarFooter, { borderTopColor: isDark ? '#27272A' : '#E4E4E7' }]}>
-        <View style={styles.footerRow}>
-          <View style={styles.statusGroup}>
+      {/* Footer Profile & Server Status */}
+      <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
+        <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: '#0052CC' }]}>
+            <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>GM</AppText>
+          </View>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
+              Gabriel Monte
+            </AppText>
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+              Super Admin
+            </AppText>
+          </View>
+        </View>
+
+        <View style={styles.bottomStatusRow}>
+          <View style={styles.statusIndicator}>
             <View style={styles.dotGreen} />
-            <AppText style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#A1A1AA' : '#71717A' }}>
-              VPS Online
+            <AppText style={{ fontSize: 11, fontWeight: '600', color: '#00875A' }}>
+              PostgreSQL VPS Online
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeBtn, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', borderColor: isDark ? '#27272A' : '#E4E4E7' }]}
+            style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
           >
-            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A1A1AA' : '#71717A'} />
+            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -105,14 +152,14 @@ function WebSidebarNav() {
 }
 
 export default function TabLayout() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const isWebLayout = Platform.OS === 'web' || width >= 768;
 
   return (
-    <View style={[styles.rootWrapper, { backgroundColor: isDark ? '#09090B' : '#FAFAFA' }]}>
+    <View style={[styles.rootWrapper, { backgroundColor: colors.background }]}>
       {isWebLayout && <WebSidebarNav />}
 
       <View style={styles.contentWrapper}>
@@ -215,53 +262,78 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 230,
+    width: 250,
     height: '100%',
     borderRightWidth: 1,
     padding: 16,
     justifyContent: 'space-between',
   },
-  sidebarHeader: {
+  sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
-    paddingHorizontal: 4,
   },
-  logoDot: {
-    width: 26,
-    height: 26,
+  logoSquare: {
+    width: 34,
+    height: 34,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adminBadge: {
-    marginLeft: 'auto',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  crmPill: {
+    backgroundColor: '#0052CC',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
   },
   navList: {
     flex: 1,
+    gap: 16,
+  },
+  navGroup: {
     gap: 2,
+  },
+  groupHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    paddingLeft: 6,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: 6,
+    borderLeftWidth: 3,
   },
   sidebarFooter: {
     paddingTop: 14,
     borderTopWidth: 1,
+    gap: 8,
   },
-  footerRow: {
+  crmProfileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  avatarCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
   },
-  statusGroup: {
+  statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -270,11 +342,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#22C55E',
+    backgroundColor: '#00875A',
   },
   themeBtn: {
     padding: 5,
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
   },
   contentWrapper: {
