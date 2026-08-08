@@ -15,22 +15,24 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_support_tickets_v3';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v4';
 
-// Shared in-memory array to sync state immediately
-let sharedTicketsMemory: SupportTicket[] = [];
+// Global memory cache to hold tickets across imports
+let globalTicketsMemory: SupportTicket[] = [];
 
 /**
- * Fetch all support tickets
+ * Fetch all support tickets across storage mechanisms
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   try {
     let json: string | null = null;
 
+    // 1. Try localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
     }
 
+    // 2. Try SecureStore if native mobile
     if (!json && Platform.OS !== 'web') {
       try {
         json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
@@ -40,15 +42,15 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     if (json) {
       const parsed = JSON.parse(json);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        sharedTicketsMemory = parsed;
+        globalTicketsMemory = parsed;
         return parsed;
       }
     }
   } catch (error) {
-    console.warn('Failed to load support tickets from storage:', error);
+    console.warn('Failed to load tickets:', error);
   }
 
-  return sharedTicketsMemory;
+  return globalTicketsMemory;
 }
 
 /**
@@ -67,7 +69,7 @@ export async function createSupportTicket(
     const newTicket: SupportTicket = {
       id: `t-${Date.now()}`,
       userName: userName || profile.name || 'Usuário Mobile',
-      userEmail: userEmail || 'usuario@liferoutine.com',
+      userEmail: userEmail || 'usuario.mobile@liferoutine.com',
       subject: subject.trim(),
       message: message.trim(),
       status: 'open',
@@ -75,13 +77,14 @@ export async function createSupportTicket(
     };
 
     const updated = [newTicket, ...existing];
-    sharedTicketsMemory = updated;
+    globalTicketsMemory = updated;
     const jsonStr = JSON.stringify(updated);
 
     // Save to web localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+        window.dispatchEvent(new Event('liferoutine_tickets_updated'));
       } catch (e) {}
     }
 
@@ -92,7 +95,7 @@ export async function createSupportTicket(
       } catch (e) {}
     }
 
-    // Attempt posting to backend server endpoint
+    // Post ticket to backend server endpoint
     fetch(`${BACKEND_API_URL}/api/tickets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -109,7 +112,7 @@ export async function createSupportTicket(
     return {
       success: false,
       message: 'Erro ao gravar chamado.',
-      tickets: sharedTicketsMemory,
+      tickets: globalTicketsMemory,
     };
   }
 }
@@ -124,12 +127,13 @@ export async function updateTicketStatus(
   try {
     const current = await getSupportTickets();
     const updated = current.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t));
-    sharedTicketsMemory = updated;
+    globalTicketsMemory = updated;
     const jsonStr = JSON.stringify(updated);
 
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+        window.dispatchEvent(new Event('liferoutine_tickets_updated'));
       } catch (e) {}
     }
 
@@ -142,6 +146,6 @@ export async function updateTicketStatus(
     return updated;
   } catch (error) {
     console.warn('Failed to update ticket status:', error);
-    return sharedTicketsMemory;
+    return globalTicketsMemory;
   }
 }

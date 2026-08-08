@@ -32,6 +32,12 @@ export default function HabitsScreen() {
   useEffect(() => {
     if (isWeb) {
       getSupportTickets().then(setTickets);
+
+      if (typeof window !== 'undefined') {
+        const handleSync = () => getSupportTickets().then(setTickets);
+        window.addEventListener('liferoutine_tickets_updated', handleSync);
+        return () => window.removeEventListener('liferoutine_tickets_updated', handleSync);
+      }
     }
   }, [isWeb, selectedTable]);
 

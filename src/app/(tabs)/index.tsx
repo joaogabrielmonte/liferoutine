@@ -79,6 +79,12 @@ export default function HomeScreen() {
         }
       });
       loadTickets();
+
+      if (typeof window !== 'undefined') {
+        const handleSync = () => loadTickets();
+        window.addEventListener('liferoutine_tickets_updated', handleSync);
+        return () => window.removeEventListener('liferoutine_tickets_updated', handleSync);
+      }
     }, [])
   );
 
