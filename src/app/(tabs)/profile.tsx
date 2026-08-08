@@ -7,9 +7,7 @@ import {
   Switch,
   Alert,
   Platform,
-  Modal,
   TextInput,
-  Pressable,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +18,6 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { useTodayHabits } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
-import { AppButton } from '@/components/atoms/AppButton';
 import {
   requestNotificationPermissions,
   scheduleHabitReminder,
@@ -95,8 +92,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [vpsPing, setVpsPing] = useState<'online' | 'offline' | 'checking'>('online');
 
-  // Support Ticket Modal state
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  // Support Ticket Form State
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
 
@@ -117,10 +113,10 @@ export default function ProfileScreen() {
       const res = await fetch(`${BACKEND_API_URL}/api/auth/users`).catch(() => null);
       if (res && res.ok) {
         setVpsPing('online');
-        alert('✅ Conexão VPS OK: Servidor Oracle (147.15.72.151) e PostgreSQL 16 operacionais!');
+        alert('Conexão VPS OK: Servidor Oracle (147.15.72.151) e PostgreSQL 16 operacionais!');
       } else {
         setVpsPing('offline');
-        alert('⚠️ Conexão de teste offline.');
+        alert('Conexão de teste offline.');
       }
     } catch (e) {
       setVpsPing('offline');
@@ -135,10 +131,9 @@ export default function ProfileScreen() {
 
     const res = await createSupportTicket(ticketSubject, ticketMessage);
     if (res.success) {
-      setIsTicketModalOpen(false);
       setTicketSubject('');
       setTicketMessage('');
-      Alert.alert('Chamado Enviado! 🎫', res.message);
+      Alert.alert('Chamado Enviado!', res.message);
     } else {
       Alert.alert('Erro', res.message);
     }
@@ -150,7 +145,7 @@ export default function ProfileScreen() {
   if (isWeb) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
+        style={[styles.safe, { backgroundColor: isDark ? '#0B0F19' : '#F9FAFB' }]}
         edges={['top']}
       >
         <ScrollView
@@ -169,7 +164,7 @@ export default function ProfileScreen() {
           </Animated.View>
 
           {/* VPS Status Overview Card */}
-          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={[styles.vpsCard, { backgroundColor: cardBg, borderColor }]}>
+          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={[styles.vpsCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
             <View style={styles.vpsTopRow}>
               <View style={[styles.vpsIconBox, { backgroundColor: 'rgba(0, 135, 90, 0.1)' }]}>
                 <MaterialCommunityIcons name="server-security" size={24} color="#00875A" />
@@ -194,7 +189,7 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.vpsDetailsGrid}>
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>DOMÍNIO & SSL</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, color: '#00875A', marginTop: 2 }}>
                   https://kingslityc.com.br
@@ -204,7 +199,7 @@ export default function ProfileScreen() {
                 </AppText>
               </View>
 
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>REVERSE PROXY</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, marginTop: 2 }}>
                   Nginx Reverse Proxy
@@ -214,7 +209,7 @@ export default function ProfileScreen() {
                 </AppText>
               </View>
 
-              <View style={[styles.detailItem, { borderColor }]}>
+              <View style={[styles.detailItem, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
                 <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>BANCO DE DADOS</AppText>
                 <AppText style={{ fontWeight: '600', fontSize: 13, color: '#0052CC', marginTop: 2 }}>
                   PostgreSQL 16 Engine
@@ -227,14 +222,14 @@ export default function ProfileScreen() {
           </Animated.View>
 
           {/* Infra Actions */}
-          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.vpsCard, { backgroundColor: cardBg, borderColor }]}>
+          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.vpsCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
             <AppText style={{ fontWeight: '700', fontSize: 14, marginBottom: 12 }}>
               Ações de Manutenção do Servidor
             </AppText>
 
             <View style={{ gap: 8 }}>
               <TouchableOpacity
-                style={[styles.btnRow, { borderColor }]}
+                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
                 onPress={() => alert('Logs Nginx verificados: 0 erros de HTTPS.')}
               >
                 <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
@@ -245,7 +240,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.btnRow, { borderColor }]}
+                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
                 onPress={() => alert('Backup do banco de dados gerado com sucesso.')}
               >
                 <Ionicons name="cloud-download-outline" size={16} color={colors.textSecondary} />
@@ -367,20 +362,54 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
-        {/* Support & Ticket Modal Button */}
+        {/* Support Ticket Section - Directly in Profile page */}
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <AppText variant="label" color="textSecondary" style={styles.sectionLabel}>
             Suporte & Atendimento
           </AppText>
-          <AppCard>
-            <SettingRow
-              icon={<Ionicons name="chatbubbles-outline" size={18} color="#0052CC" />}
-              iconBg="rgba(0, 82, 204, 0.15)"
-              label="Abrir Chamado de Suporte"
-              subtitle="Notificar o painel administrativo sobre dúvidas ou problemas"
-              isLast
-              onPress={() => setIsTicketModalOpen(true)}
-            />
+          <AppCard style={{ padding: Spacing.base }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
+              <AppText style={{ fontWeight: '700', fontSize: 14 }}>
+                Enviar Chamado ao Administrador
+              </AppText>
+            </View>
+            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
+              Descreva sua dúvida ou problema técnico. O painel administrativo receberá seu chamado imediatamente.
+            </AppText>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text }]}
+                value={ticketSubject}
+                onChangeText={setTicketSubject}
+                placeholder="Ex: Problema de sincronização"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
+                value={ticketMessage}
+                onChangeText={setTicketMessage}
+                placeholder="Descreva o que está ocorrendo..."
+                placeholderTextColor={colors.textTertiary}
+                multiline
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.btnSubmitTicket, { backgroundColor: colors.primary }]}
+              onPress={handleCreateTicketSubmit}
+              activeOpacity={0.8}
+            >
+              <AppText style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                Enviar Chamado
+              </AppText>
+            </TouchableOpacity>
           </AppCard>
         </Animated.View>
 
@@ -412,58 +441,6 @@ export default function ProfileScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
-
-      {/* Support Ticket Modal for Mobile Users */}
-      <Modal
-        visible={isTicketModalOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setIsTicketModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setIsTicketModalOpen(false)} />
-          <View style={[styles.ticketModalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <View style={styles.ticketModalHeader}>
-              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Abrir Chamado de Suporte</AppText>
-              <TouchableOpacity onPress={() => setIsTicketModalOpen(false)}>
-                <Ionicons name="close" size={20} color={colors.icon} />
-              </TouchableOpacity>
-            </View>
-
-            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
-              Descreva sua dúvida ou problema para enviar ao nosso painel administrativo:
-            </AppText>
-
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
-            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.textInput, { color: colors.text }]}
-                value={ticketSubject}
-                onChangeText={setTicketSubject}
-                placeholder="Ex: Dúvida sobre lembrete de treino"
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
-            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
-              <TextInput
-                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
-                value={ticketMessage}
-                onChangeText={setTicketMessage}
-                placeholder="Descreva o que está ocorrendo..."
-                placeholderTextColor={colors.textTertiary}
-                multiline
-              />
-            </View>
-
-            <View style={styles.modalButtonRow}>
-              <AppButton label="Cancelar" variant="ghost" onPress={() => setIsTicketModalOpen(false)} />
-              <AppButton label="Enviar Chamado" variant="primary" onPress={handleCreateTicketSubmit} />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -560,29 +537,6 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   rowText: { flex: 1 },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 16,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  ticketModalCard: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-  },
-  ticketModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
   inputLabel: {
     marginTop: 8,
     marginBottom: 4,
@@ -599,10 +553,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: 8,
   },
-  modalButtonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 12,
+  btnSubmitTicket: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
   },
 });
