@@ -14,121 +14,132 @@ function WebSidebarNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const sidebarNavItems = [
-    { name: 'index', title: 'Visão Geral & Dashboard', icon: 'speedometer-outline', activeIcon: 'speedometer', path: '/(tabs)' },
-    { name: 'users', title: 'Gestão de Usuários & Roles', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
-    { name: 'habits', title: 'Hábitos Globais', icon: 'list-outline', activeIcon: 'list', path: '/(tabs)/habits' },
-    { name: 'stats', title: 'Analytics & Relatórios', icon: 'bar-chart-outline', activeIcon: 'bar-chart', path: '/(tabs)/stats' },
-    { name: 'profile', title: 'Configurações do Servidor', icon: 'settings-outline', activeIcon: 'settings', path: '/(tabs)/profile' },
+  const navSections = [
+    {
+      title: 'GERENCIAMENTO DE CONTEÚDO',
+      items: [
+        { name: 'users', title: 'Usuários & Níveis de Acesso', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
+        { name: 'habits', title: 'Hábitos Globais', icon: 'checkbox-outline', activeIcon: 'checkbox', path: '/(tabs)/habits' },
+      ],
+    },
+    {
+      title: 'ANALYTICS & EXECUTIVE',
+      items: [
+        { name: 'index', title: 'Visão Geral & Dashboard', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
+        { name: 'stats', title: 'Analytics & Relatórios', icon: 'stats-chart-outline', activeIcon: 'stats-chart', path: '/(tabs)/stats' },
+      ],
+    },
+    {
+      title: 'INFRAESTRUTURA',
+      items: [
+        { name: 'profile', title: 'Configurações do Servidor', icon: 'server-outline', activeIcon: 'server', path: '/(tabs)/profile' },
+      ],
+    },
   ];
 
   return (
     <View style={[styles.sidebar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-      {/* Brand Header */}
-      <View style={styles.sidebarHeader}>
-        <View style={[styles.logoIcon, { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: 'rgba(139, 92, 246, 0.4)' }]}>
-          <MaterialCommunityIcons name="lightning-bolt" size={26} color="#C084FC" />
+      {/* Enterprise Brand Header */}
+      <View style={styles.sidebarBrand}>
+        <View style={[styles.logoSquare, { backgroundColor: colors.primary }]}>
+          <MaterialCommunityIcons name="lightning-bolt" size={22} color="#FFFFFF" />
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: Spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText variant="h3" style={{ fontWeight: '900', letterSpacing: 0.5 }}>
+            <AppText variant="subtitle" style={{ fontWeight: '800', fontSize: 15, letterSpacing: 0.3 }}>
               LifeRoutine
             </AppText>
-            <View style={styles.proTag}>
-              <AppText style={{ fontSize: 9, fontWeight: '800', color: '#FFF' }}>ADMIN</AppText>
+            <View style={styles.enterprisePill}>
+              <AppText style={{ fontSize: 9, fontWeight: '800', color: '#FFFFFF' }}>ENTERPRISE</AppText>
             </View>
           </View>
           <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-            Command Center • Oracle VPS
+            Painel Administrativo
           </AppText>
         </View>
       </View>
 
-      {/* Nav items */}
-      <View style={styles.sidebarNavList}>
-        <AppText variant="caption" color="textTertiary" style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 6, paddingLeft: 8 }}>
-          NAVEGAÇÃO PRINCIPAL
-        </AppText>
+      {/* Navigation Groups */}
+      <View style={styles.navList}>
+        {navSections.map((section) => (
+          <View key={section.title} style={styles.navGroup}>
+            <AppText variant="caption" color="textTertiary" style={styles.groupHeader}>
+              {section.title}
+            </AppText>
 
-        {sidebarNavItems.map((item) => {
-          const isSelected =
-            item.name === 'index'
-              ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
-              : pathname.includes(item.name);
+            {section.items.map((item) => {
+              const isSelected =
+                item.name === 'index'
+                  ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
+                  : pathname.includes(item.name);
 
-          return (
-            <TouchableOpacity
-              key={item.name}
-              style={[
-                styles.sidebarItem,
-                {
-                  backgroundColor: isSelected ? colors.primary : 'transparent',
-                },
-              ]}
-              onPress={() => router.push(item.path as any)}
-              activeOpacity={0.7}
-            >
-              {isSelected && <View style={styles.activeGlowPill} />}
-              <Ionicons
-                name={(isSelected ? item.activeIcon : item.icon) as any}
-                size={20}
-                color={isSelected ? '#FFFFFF' : colors.textSecondary}
-              />
-              <AppText
-                style={{
-                  fontSize: 13,
-                  fontWeight: isSelected ? '800' : '600',
-                  color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                  marginLeft: Spacing.sm,
-                }}
-              >
-                {item.title}
-              </AppText>
-            </TouchableOpacity>
-          );
-        })}
+              return (
+                <TouchableOpacity
+                  key={item.name}
+                  style={[
+                    styles.navItem,
+                    {
+                      backgroundColor: isSelected ? (isDark ? '#1E293B' : '#E2E8F0') : 'transparent',
+                      borderColor: isSelected ? colors.primary : 'transparent',
+                    },
+                  ]}
+                  onPress={() => router.push(item.path as any)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={(isSelected ? item.activeIcon : item.icon) as any}
+                    size={17}
+                    color={isSelected ? colors.primary : colors.textSecondary}
+                  />
+                  <AppText
+                    style={{
+                      fontSize: 13,
+                      fontWeight: isSelected ? '700' : '600',
+                      color: isSelected ? colors.text : colors.textSecondary,
+                      marginLeft: Spacing.xs,
+                      flex: 1,
+                    }}
+                  >
+                    {item.title}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
 
-      {/* Super Admin User Profile Card & Footer */}
+      {/* Footer Profile & Server Status */}
       <View style={[styles.sidebarFooter, { borderTopColor: colors.border }]}>
-        <View style={[styles.adminUserCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.adminAvatar, { backgroundColor: '#8B5CF6' }]}>
-            <AppText style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>GM</AppText>
+        <View style={[styles.corpProfileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: '#2563EB' }]}>
+            <AppText style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>GM</AppText>
           </View>
-          <View style={{ flex: 1, marginLeft: Spacing.xs }}>
-            <AppText variant="caption" style={{ fontWeight: '800' }}>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <AppText variant="caption" style={{ fontWeight: '800', fontSize: 12 }}>
               Gabriel Monte
             </AppText>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              gabriel@liferoutine.com
+              Super Administrator
             </AppText>
-          </View>
-          <View style={styles.onlineBadge}>
-            <View style={styles.statusDot} />
           </View>
         </View>
 
-        <View style={styles.themeRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={16} color={colors.primary} />
-            <AppText variant="caption" style={{ marginLeft: 6, fontWeight: '700' }}>
-              Tema {isDark ? 'Escuro' : 'Claro'}
+        <View style={styles.bottomStatusRow}>
+          <View style={styles.statusIndicator}>
+            <View style={styles.dotGreen} />
+            <AppText style={{ fontSize: 11, fontWeight: '700', color: '#059669' }}>
+              Oracle VPS Online
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeToggleBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+            style={[styles.themeBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+            title="Alternar Tema"
           >
-            <Ionicons name="swap-horizontal" size={14} color={colors.text} />
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={14} color={colors.text} />
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.dbStatusPill}>
-          <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
-          <AppText style={{ fontSize: 11, color: '#22C55E', fontWeight: '700' }}>
-            Oracle VPS PostgreSQL Online
-          </AppText>
         </View>
       </View>
     </View>
@@ -246,107 +257,93 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 270,
+    width: 260,
     height: '100%',
     borderRightWidth: 1,
     padding: Spacing.md,
     justifyContent: 'space-between',
-    ...Shadow.sm,
   },
-  sidebarHeader: {
+  sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
     marginBottom: Spacing.lg,
-    paddingHorizontal: 4,
   },
-  logoIcon: {
-    width: 42,
-    height: 42,
+  logoSquare: {
+    width: 36,
+    height: 36,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
-  proTag: {
-    backgroundColor: '#8B5CF6',
+  enterprisePill: {
+    backgroundColor: '#2563EB',
     paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  sidebarNavList: {
+  navList: {
     flex: 1,
-    gap: 4,
+    gap: Spacing.md,
   },
-  sidebarItem: {
+  navGroup: {
+    gap: 3,
+  },
+  groupHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    paddingLeft: 6,
+  },
+  navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 11,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 9,
     borderRadius: Radius.md,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  activeGlowPill: {
-    position: 'absolute',
-    left: 0,
-    top: 6,
-    bottom: 6,
-    width: 4,
-    backgroundColor: '#FFFFFF',
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
+    borderLeftWidth: 3,
   },
   sidebarFooter: {
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: Spacing.xs,
   },
-  adminUserCard: {
+  corpProfileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    padding: 8,
     borderRadius: Radius.md,
     borderWidth: 1,
-    marginBottom: 4,
   },
-  adminAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  avatarCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  onlineBadge: {
-    padding: 4,
-  },
-  themeRow: {
+  bottomStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
+    marginTop: 4,
   },
-  themeToggleBtn: {
-    padding: 4,
-    paddingHorizontal: 8,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-  },
-  dbStatusPill: {
+  statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(34, 197, 94, 0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.md,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
+  dotGreen: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    backgroundColor: '#22C55E',
+    backgroundColor: '#059669',
+  },
+  themeBtn: {
+    padding: 5,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
   },
   contentWrapper: {
     flex: 1,

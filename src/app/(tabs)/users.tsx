@@ -8,7 +8,6 @@ import {
   Modal,
   Pressable,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,7 +20,7 @@ import { BACKEND_API_URL } from '@/services/supabase';
 import { useHabitsStore } from '@/stores/useHabitsStore';
 import { Radius, Spacing, Shadow } from '@/constants/theme';
 
-type UserRole = 'admin' | 'member' | 'guest';
+type UserRole = 'admin' | 'manager' | 'member';
 
 type UserData = {
   id: string;
@@ -41,7 +40,7 @@ export default function UsersScreen() {
 
   const [users, setUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'member' | 'guest'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'manager' | 'member'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [dbStatus, setDbStatus] = useState<'online' | 'offline'>('online');
 
@@ -74,7 +73,7 @@ export default function UsersScreen() {
       console.warn('Failed to fetch remote users:', e);
     }
 
-    // Default system users fallback
+    // Default corporate fallback
     setUsers([
       {
         id: '130e711b-97e5-4d7c-8a2b-c90b746a5149',
@@ -88,7 +87,7 @@ export default function UsersScreen() {
       {
         id: '241f822c-88f6-5e8d-9b3a-d10c857b6250',
         name: 'Emmanuel Fernando',
-        email: 'emmanuelfernando@gmail.come',
+        email: 'emmanuelfernando@gmail.com',
         wakeTime: '07:00',
         sleepTime: '23:00',
         role: 'member',
@@ -139,150 +138,162 @@ export default function UsersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Header Command Center Banner */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.commandHeader}>
-          <View style={styles.titleContainer}>
-            <View style={styles.titleBadgeRow}>
-              <View style={[styles.badgeAdmin, { backgroundColor: 'rgba(139, 92, 246, 0.18)', borderColor: 'rgba(139, 92, 246, 0.4)' }]}>
-                <MaterialCommunityIcons name="shield-crown" size={14} color="#C084FC" />
-                <AppText style={{ fontSize: 11, fontWeight: '800', color: '#C084FC', marginLeft: 4 }}>
-                  PAINEL ADMIN • ACESSO TOTAL
-                </AppText>
-              </View>
-
-              <View style={[styles.badgeServer, { backgroundColor: 'rgba(34, 197, 94, 0.15)', borderColor: 'rgba(34, 197, 94, 0.4)' }]}>
-                <View style={styles.pulseDot} />
-                <AppText style={{ fontSize: 11, fontWeight: '700', color: '#22C55E', marginLeft: 4 }}>
-                  Oracle VPS PostgreSQL
-                </AppText>
-              </View>
+        {/* Corporate Page Header */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.corpHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.breadcrumbRow}>
+              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '600' }}>
+                ADMINISTRAÇÃO
+              </AppText>
+              <AppText variant="caption" color="textSecondary" style={{ marginHorizontal: 6 }}>
+                /
+              </AppText>
+              <AppText variant="caption" style={{ fontWeight: '700', color: colors.primary }}>
+                GESTÃO DE USUÁRIOS & PERMISSÕES
+              </AppText>
             </View>
 
-            <AppText variant="h2" style={{ fontWeight: '800', marginTop: Spacing.xs }}>
-              Gestão de Usuários & Permissões
+            <AppText variant="h2" style={{ fontWeight: '800', marginTop: 4 }}>
+              Gestão de Usuários & Níveis de Acesso
             </AppText>
             <AppText variant="caption" color="textSecondary">
-              Controle de acesso em tempo real, atribuição de cargos e auditoria de contas do servidor
+              Gerencie usuários ativos, contas registradas no banco PostgreSQL e permissões de acesso ao aplicativo mobile.
             </AppText>
           </View>
 
-          <TouchableOpacity
-            style={[styles.btnRefresh, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={fetchUsers}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="sync-outline" size={18} color={colors.primary} />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: '700', marginLeft: 6 }}>
-              Atualizar Dados
-            </AppText>
-          </TouchableOpacity>
+          <View style={styles.headerActionsGroup}>
+            <TouchableOpacity
+              style={[styles.btnCorpSecondary, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+              onPress={fetchUsers}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh-outline" size={16} color={colors.text} />
+              <AppText variant="caption" style={{ fontWeight: '700', marginLeft: 6 }}>
+                Sincronizar VPS
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.btnCorpPrimary, { backgroundColor: colors.primary }]}
+              onPress={() => alert('Função de convidar usuário ativada')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
+              <AppText variant="caption" style={{ fontWeight: '700', color: '#FFFFFF', marginLeft: 6 }}>
+                Novo Usuário
+              </AppText>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
-        {/* 4 Metrics Cards Grid */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.metricsGrid}>
-          <AppCard style={styles.metricCard} elevated>
-            <View style={styles.metricHeader}>
-              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700' }}>
+        {/* Corporate Metrics Bar */}
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.corpMetricsRow}>
+          <View style={[styles.corpMetricCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.corpMetricTop}>
+              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
                 TOTAL DE USUÁRIOS
               </AppText>
-              <View style={[styles.iconBox, { backgroundColor: 'rgba(6, 182, 212, 0.15)' }]}>
-                <Ionicons name="people" size={20} color="#06B6D4" />
+              <View style={[styles.corpIconBox, { backgroundColor: 'rgba(37, 99, 235, 0.1)' }]}>
+                <Ionicons name="people-outline" size={18} color="#2563EB" />
               </View>
             </View>
-            <AppText variant="h1" style={{ fontWeight: '800', color: '#06B6D4', marginTop: Spacing.xs }}>
+            <AppText variant="h1" style={{ fontWeight: '800', marginTop: 4 }}>
               {users.length}
             </AppText>
-            <AppText variant="caption" color="textSecondary">
-              {adminCount} admins • {memberCount} membros
-            </AppText>
-          </AppCard>
-
-          <AppCard style={styles.metricCard} elevated>
-            <View style={styles.metricHeader}>
-              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700' }}>
-                BANCO DE DADOS
+            <View style={styles.metricSubRow}>
+              <View style={styles.badgeSuccess}>
+                <AppText style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>● {adminCount} Admin</AppText>
+              </View>
+              <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginLeft: 6 }}>
+                {memberCount} Membros
               </AppText>
-              <View style={[styles.iconBox, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                <MaterialCommunityIcons name="database-check" size={20} color="#22C55E" />
+            </View>
+          </View>
+
+          <View style={[styles.corpMetricCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.corpMetricTop}>
+              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
+                STATUS SERVIDOR VPS
+              </AppText>
+              <View style={[styles.corpIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                <MaterialCommunityIcons name="server-network" size={18} color="#10B981" />
               </View>
             </View>
-            <AppText variant="h3" style={{ fontWeight: '800', color: '#22C55E', marginTop: Spacing.xs }}>
-              {dbStatus === 'online' ? 'PostgreSQL' : 'SQLite Local'}
+            <AppText variant="h3" style={{ fontWeight: '800', color: '#10B981', marginTop: 4 }}>
+              {dbStatus === 'online' ? 'PostgreSQL Ativo' : 'SQLite Local'}
             </AppText>
-            <AppText variant="caption" color="textSecondary">
-              Conexão VPS Ativa 147.15.72.151
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
+              Oracle Cloud • 147.15.72.151
             </AppText>
-          </AppCard>
+          </View>
 
-          <AppCard style={styles.metricCard} elevated>
-            <View style={styles.metricHeader}>
-              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700' }}>
-                HÁBITOS NO SISTEMA
+          <View style={[styles.corpMetricCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.corpMetricTop}>
+              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
+                HÁBITOS CADASTRADOS
               </AppText>
-              <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <MaterialCommunityIcons name="target" size={20} color="#F59E0B" />
+              <View style={[styles.corpIconBox, { backgroundColor: 'rgba(217, 119, 6, 0.1)' }]}>
+                <Ionicons name="checkbox-outline" size={18} color="#D97706" />
               </View>
             </View>
-            <AppText variant="h1" style={{ fontWeight: '800', color: '#F59E0B', marginTop: Spacing.xs }}>
+            <AppText variant="h1" style={{ fontWeight: '800', marginTop: 4 }}>
               {habits.length}
             </AppText>
-            <AppText variant="caption" color="textSecondary">
-              Metas registradas no app
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+              {logs.length} registros de conclusão
             </AppText>
-          </AppCard>
+          </View>
 
-          <AppCard style={styles.metricCard} elevated>
-            <View style={styles.metricHeader}>
-              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700' }}>
-                CONTROLE DE ACESSO
+          <View style={[styles.corpMetricCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.corpMetricTop}>
+              <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
+                SEU NIVEL DE ACESSO
               </AppText>
-              <View style={[styles.iconBox, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                <MaterialCommunityIcons name="lock-check" size={20} color="#8B5CF6" />
+              <View style={[styles.corpIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#8B5CF6" />
               </View>
             </View>
-            <AppText variant="h3" style={{ fontWeight: '800', color: '#8B5CF6', marginTop: Spacing.xs }}>
-              Permissões OK
+            <AppText variant="h3" style={{ fontWeight: '800', color: '#8B5CF6', marginTop: 4 }}>
+              Super Admin
             </AppText>
-            <AppText variant="caption" color="textSecondary">
-              Gestão de roles habilitada
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
+              Acesso e Controle Total
             </AppText>
-          </AppCard>
+          </View>
         </Animated.View>
 
-        {/* Search & Role Filter Bar */}
-        <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.filterSection}>
-          <View style={[styles.searchBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
+        {/* Corporate Search & Filter Toolbar */}
+        <Animated.View entering={FadeInDown.delay(160).duration(400)} style={[styles.corpToolbar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <View style={styles.searchWrapper}>
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="🔍 Buscar usuário por nome ou e-mail..."
+              placeholder="Buscar por nome ou e-mail corporativo..."
               placeholderTextColor={colors.textTertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery !== '' && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+                <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Role Filter Pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleFilterRow}>
+          <View style={styles.filterGroup}>
             {[
-              { key: 'all', label: 'Todos os Usuários' },
-              { key: 'admin', label: '👑 Super Admins' },
-              { key: 'member', label: '👤 Membros' },
-              { key: 'guest', label: '🌐 Convidados' },
+              { key: 'all', label: 'Todos' },
+              { key: 'admin', label: 'Super Admins' },
+              { key: 'member', label: 'Membros' },
             ].map(({ key, label }) => {
               const isActive = roleFilter === key;
               return (
                 <TouchableOpacity
                   key={key}
                   style={[
-                    styles.rolePill,
+                    styles.corpFilterTab,
                     {
-                      backgroundColor: isActive ? colors.primary : colors.surfaceElevated,
+                      backgroundColor: isActive ? colors.primary : 'transparent',
                       borderColor: isActive ? colors.primary : colors.border,
                     },
                   ]}
@@ -301,156 +312,160 @@ export default function UsersScreen() {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
         </Animated.View>
 
-        {/* User Cards Grid / List */}
-        <View style={styles.usersListContainer}>
-          {filteredUsers.map((user, idx) => {
-            const initials = user.name
-              ? user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase()
-              : 'U';
+        {/* Corporate Data Table Container */}
+        <Animated.View entering={FadeInDown.delay(220).duration(400)} style={[styles.corpTableContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          {/* Table Header */}
+          <View style={[styles.tableHeaderRow, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderBottomColor: colors.border }]}>
+            <AppText variant="caption" style={[styles.thCell, { flex: 2.5, fontWeight: '700' }]} color="textSecondary">
+              USUÁRIO / CONTA
+            </AppText>
+            <AppText variant="caption" style={[styles.thCell, { flex: 1.5, fontWeight: '700' }]} color="textSecondary">
+              CARGO & NÍVEL
+            </AppText>
+            <AppText variant="caption" style={[styles.thCell, { flex: 1.8, fontWeight: '700' }]} color="textSecondary">
+              HORÁRIO ROTINA
+            </AppText>
+            <AppText variant="caption" style={[styles.thCell, { flex: 1.8, fontWeight: '700' }]} color="textSecondary">
+              DATA REGISTRO
+            </AppText>
+            <AppText variant="caption" style={[styles.thCell, { flex: 1.2, fontWeight: '700' }]} color="textSecondary">
+              STATUS
+            </AppText>
+            <AppText variant="caption" style={[styles.thCell, { flex: 2, textAlign: 'right', fontWeight: '700' }]} color="textSecondary">
+              AÇÕES DE GESTÃO
+            </AppText>
+          </View>
 
-            const isAdmin = user.role === 'admin';
+          {/* Table Rows */}
+          {filteredUsers.length === 0 ? (
+            <View style={styles.emptyTableState}>
+              <Ionicons name="folder-open-outline" size={36} color={colors.textTertiary} />
+              <AppText variant="caption" color="textSecondary" style={{ marginTop: 8 }}>
+                Nenhum usuário encontrado com os filtros selecionados.
+              </AppText>
+            </View>
+          ) : (
+            filteredUsers.map((user, idx) => {
+              const initials = user.name
+                ? user.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase()
+                : 'U';
 
-            return (
-              <Animated.View
-                key={user.id || idx}
-                entering={FadeInDown.delay(220 + idx * 40).duration(400)}
-              >
-                <AppCard
+              const isAdmin = user.role === 'admin';
+
+              return (
+                <View
+                  key={user.id || idx}
                   style={[
-                    styles.userCard,
-                    user.isBlocked && styles.blockedUserCard,
+                    styles.tableBodyRow,
+                    { borderBottomColor: colors.border },
+                    idx % 2 === 1 && { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' },
                   ]}
-                  elevated
                 >
-                  <View style={styles.userCardHeader}>
-                    <View style={styles.userAvatarSection}>
-                      <View
-                        style={[
-                          styles.avatarCircle,
-                          {
-                            backgroundColor: isAdmin ? '#8B5CF6' : colors.primary,
-                          },
-                        ]}
-                      >
-                        <AppText style={styles.avatarText}>{initials}</AppText>
-                      </View>
-
-                      <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                        <View style={styles.userNameRow}>
-                          <AppText variant="bodyMedium" style={{ fontWeight: '800' }}>
-                            {user.name}
-                          </AppText>
-
-                          {isAdmin ? (
-                            <View style={[styles.roleTag, { backgroundColor: 'rgba(139, 92, 246, 0.15)', borderColor: 'rgba(139, 92, 246, 0.3)' }]}>
-                              <MaterialCommunityIcons name="shield-crown" size={12} color="#8B5CF6" />
-                              <AppText style={{ fontSize: 10, fontWeight: '800', color: '#8B5CF6', marginLeft: 3 }}>
-                                Super Admin
-                              </AppText>
-                            </View>
-                          ) : (
-                            <View style={[styles.roleTag, { backgroundColor: 'rgba(6, 182, 212, 0.15)', borderColor: 'rgba(6, 182, 212, 0.3)' }]}>
-                              <AppText style={{ fontSize: 10, fontWeight: '700', color: '#06B6D4' }}>
-                                Membro
-                              </AppText>
-                            </View>
-                          )}
-
-                          {user.isBlocked && (
-                            <View style={[styles.roleTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                              <AppText style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>
-                                Bloqueado
-                              </AppText>
-                            </View>
-                          )}
-                        </View>
-
-                        <AppText variant="caption" color="textSecondary" style={{ marginTop: 2 }}>
-                          {user.email}
-                        </AppText>
-                      </View>
+                  {/* User Info */}
+                  <View style={[styles.tdCell, { flex: 2.5, flexDirection: 'row', alignItems: 'center' }]}>
+                    <View style={[styles.avatarCircle, { backgroundColor: isAdmin ? '#2563EB' : '#475569' }]}>
+                      <AppText style={styles.avatarText}>{initials}</AppText>
                     </View>
-
-                    {/* Schedule Pills */}
-                    <View style={styles.scheduleRow}>
-                      <View style={styles.schedulePill}>
-                        <Ionicons name="sunny-outline" size={13} color="#F59E0B" />
-                        <AppText style={styles.scheduleText}>Acorda {user.wakeTime || '07:00'}</AppText>
-                      </View>
-                      <View style={styles.schedulePill}>
-                        <Ionicons name="moon-outline" size={13} color="#8B5CF6" />
-                        <AppText style={styles.scheduleText}>Dorme {user.sleepTime || '23:00'}</AppText>
-                      </View>
-                    </View>
-
-                    {/* Card Actions Footer */}
-                    <View style={[styles.cardActionsRow, { borderTopColor: colors.border }]}>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: colors.surface }]}
-                        onPress={() => setSelectedUser(user)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="eye-outline" size={15} color={colors.text} />
-                        <AppText variant="caption" style={{ fontWeight: '600', marginLeft: 4 }}>
-                          Detalhes
-                        </AppText>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}
-                        onPress={() => {
-                          setEditingPermissionsUser(user);
-                          setUserRole(user.role || 'member');
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="key-outline" size={15} color="#8B5CF6" />
-                        <AppText variant="caption" style={{ fontWeight: '700', color: '#8B5CF6', marginLeft: 4 }}>
-                          Permissões
-                        </AppText>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.actionBtn,
-                          {
-                            backgroundColor: user.isBlocked ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                          },
-                        ]}
-                        onPress={() => toggleUserBlock(user.id)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name={user.isBlocked ? 'checkmark-circle-outline' : 'ban-outline'}
-                          size={15}
-                          color={user.isBlocked ? '#22C55E' : '#EF4444'}
-                        />
-                        <AppText
-                          variant="caption"
-                          style={{
-                            fontWeight: '700',
-                            color: user.isBlocked ? '#22C55E' : '#EF4444',
-                            marginLeft: 4,
-                          }}
-                        >
-                          {user.isBlocked ? 'Desbloquear' : 'Bloquear'}
-                        </AppText>
-                      </TouchableOpacity>
+                    <View style={{ marginLeft: Spacing.xs, flex: 1 }}>
+                      <AppText variant="bodyMedium" style={{ fontWeight: '700', fontSize: 13 }}>
+                        {user.name}
+                      </AppText>
+                      <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                        {user.email}
+                      </AppText>
                     </View>
                   </View>
-                </AppCard>
-              </Animated.View>
-            );
-          })}
-        </View>
+
+                  {/* Role */}
+                  <View style={[styles.tdCell, { flex: 1.5 }]}>
+                    {isAdmin ? (
+                      <View style={styles.roleBadgeAdmin}>
+                        <Ionicons name="shield-checkmark" size={12} color="#2563EB" />
+                        <AppText style={styles.roleBadgeAdminText}>Super Admin</AppText>
+                      </View>
+                    ) : (
+                      <View style={styles.roleBadgeMember}>
+                        <AppText style={styles.roleBadgeMemberText}>Membro</AppText>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Schedule */}
+                  <View style={[styles.tdCell, { flex: 1.8 }]}>
+                    <AppText variant="caption" style={{ fontWeight: '600' }}>
+                      ☀️ {user.wakeTime || '07:00'} • 🌙 {user.sleepTime || '23:00'}
+                    </AppText>
+                  </View>
+
+                  {/* Created At */}
+                  <View style={[styles.tdCell, { flex: 1.8 }]}>
+                    <AppText variant="caption" color="textSecondary">
+                      {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                    </AppText>
+                  </View>
+
+                  {/* Status */}
+                  <View style={[styles.tdCell, { flex: 1.2 }]}>
+                    {user.isBlocked ? (
+                      <View style={styles.statusBlocked}>
+                        <AppText style={styles.statusBlockedText}>● Bloqueado</AppText>
+                      </View>
+                    ) : (
+                      <View style={styles.statusActive}>
+                        <AppText style={styles.statusActiveText}>● Ativo</AppText>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Actions */}
+                  <View style={[styles.tdCell, { flex: 2, flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }]}>
+                    <TouchableOpacity
+                      style={[styles.btnCorpAction, { backgroundColor: colors.surface }]}
+                      onPress={() => setSelectedUser(user)}
+                      title="Ver Detalhes"
+                    >
+                      <Ionicons name="eye-outline" size={14} color={colors.text} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.btnCorpAction, { backgroundColor: 'rgba(37, 99, 235, 0.1)' }]}
+                      onPress={() => {
+                        setEditingPermissionsUser(user);
+                        setUserRole(user.role || 'member');
+                      }}
+                      title="Permissões"
+                    >
+                      <Ionicons name="key-outline" size={14} color="#2563EB" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.btnCorpAction,
+                        { backgroundColor: user.isBlocked ? 'rgba(5, 150, 105, 0.1)' : 'rgba(220, 38, 38, 0.1)' },
+                      ]}
+                      onPress={() => toggleUserBlock(user.id)}
+                      title={user.isBlocked ? 'Desbloquear' : 'Bloquear'}
+                    >
+                      <Ionicons
+                        name={user.isBlocked ? 'checkmark-circle-outline' : 'ban-outline'}
+                        size={14}
+                        color={user.isBlocked ? '#059669' : '#DC2626'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </Animated.View>
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
@@ -465,15 +480,10 @@ export default function UsersScreen() {
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setSelectedUser(null)} />
           {selectedUser && (
-            <View
-              style={[
-                styles.modalCard,
-                { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-              ]}
-            >
+            <View style={[styles.corpModalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
               <View style={styles.modalHeader}>
-                <View style={[styles.avatarCircle, { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary }]}>
-                  <AppText style={[styles.avatarText, { fontSize: 16 }]}>
+                <View style={[styles.avatarCircle, { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary }]}>
+                  <AppText style={[styles.avatarText, { fontSize: 15 }]}>
                     {selectedUser.name
                       ? selectedUser.name
                           .split(' ')
@@ -484,49 +494,47 @@ export default function UsersScreen() {
                       : 'U'}
                   </AppText>
                 </View>
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                  <AppText variant="h3">{selectedUser.name}</AppText>
-                  <AppText variant="caption" color="textSecondary">
-                    {selectedUser.email}
-                  </AppText>
+                <View style={{ flex: 1, marginLeft: Spacing.xs }}>
+                  <AppText variant="h3" style={{ fontWeight: '800' }}>{selectedUser.name}</AppText>
+                  <AppText variant="caption" color="textSecondary">{selectedUser.email}</AppText>
                 </View>
-                <TouchableOpacity onPress={() => setSelectedUser(null)} style={{ padding: 4 }}>
-                  <Ionicons name="close" size={22} color={colors.icon} />
+                <TouchableOpacity onPress={() => setSelectedUser(null)}>
+                  <Ionicons name="close" size={20} color={colors.icon} />
                 </TouchableOpacity>
               </View>
 
               <View style={[styles.detailSection, { borderTopColor: colors.border }]}>
-                <AppText variant="label" style={{ marginBottom: Spacing.xs, fontWeight: '700' }}>
-                  Especificações no PostgreSQL:
+                <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  DADOS REGISTRADOS NO POSTGRESQL (ORACLE VPS)
                 </AppText>
 
                 <View style={styles.detailRow}>
-                  <AppText variant="caption" color="textSecondary">ID da Conta:</AppText>
+                  <AppText variant="caption" color="textSecondary">ID no Banco:</AppText>
                   <AppText variant="caption" style={{ fontWeight: '600' }}>{selectedUser.id}</AppText>
                 </View>
                 <View style={styles.detailRow}>
-                  <AppText variant="caption" color="textSecondary">Cargo / Nível:</AppText>
-                  <AppText variant="caption" style={{ fontWeight: '700', color: selectedUser.role === 'admin' ? '#8B5CF6' : '#06B6D4' }}>
-                    {selectedUser.role === 'admin' ? 'Super Administrator' : 'Membro'}
+                  <AppText variant="caption" color="textSecondary">Nível de Permissão:</AppText>
+                  <AppText variant="caption" style={{ fontWeight: '700', color: selectedUser.role === 'admin' ? '#2563EB' : colors.text }}>
+                    {selectedUser.role === 'admin' ? 'Super Administrator' : 'Membro Comum'}
                   </AppText>
                 </View>
                 <View style={styles.detailRow}>
-                  <AppText variant="caption" color="textSecondary">Horário Acordar:</AppText>
+                  <AppText variant="caption" color="textSecondary">Horário de Acordar:</AppText>
                   <AppText variant="caption" style={{ fontWeight: '600' }}>{selectedUser.wakeTime || '07:00'}</AppText>
                 </View>
                 <View style={styles.detailRow}>
-                  <AppText variant="caption" color="textSecondary">Horário Dormir:</AppText>
+                  <AppText variant="caption" color="textSecondary">Horário de Dormir:</AppText>
                   <AppText variant="caption" style={{ fontWeight: '600' }}>{selectedUser.sleepTime || '23:00'}</AppText>
                 </View>
                 <View style={styles.detailRow}>
-                  <AppText variant="caption" color="textSecondary">Data de Cadastro:</AppText>
+                  <AppText variant="caption" color="textSecondary">Data de Registro:</AppText>
                   <AppText variant="caption" style={{ fontWeight: '600' }}>
                     {new Date(selectedUser.createdAt).toLocaleString('pt-BR')}
                   </AppText>
                 </View>
               </View>
 
-              <View style={{ marginTop: Spacing.lg, alignItems: 'flex-end' }}>
+              <View style={{ marginTop: Spacing.md, alignItems: 'flex-end' }}>
                 <AppButton label="Fechar" variant="primary" onPress={() => setSelectedUser(null)} />
               </View>
             </View>
@@ -534,7 +542,7 @@ export default function UsersScreen() {
         </View>
       </Modal>
 
-      {/* Permission Management Modal */}
+      {/* Permission & Role Editor Modal */}
       <Modal
         visible={!!editingPermissionsUser}
         animationType="fade"
@@ -544,65 +552,61 @@ export default function UsersScreen() {
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setEditingPermissionsUser(null)} />
           {editingPermissionsUser && (
-            <View
-              style={[
-                styles.modalCard,
-                { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-              ]}
-            >
+            <View style={[styles.corpModalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
               <View style={styles.modalHeader}>
-                <Ionicons name="key-outline" size={24} color="#8B5CF6" />
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                  <AppText variant="h3">Permissões de Acesso</AppText>
+                <Ionicons name="key-outline" size={22} color="#2563EB" />
+                <View style={{ flex: 1, marginLeft: Spacing.xs }}>
+                  <AppText variant="h3" style={{ fontWeight: '800' }}>Editar Nível de Acesso</AppText>
                   <AppText variant="caption" color="textSecondary">
-                    Configurar permissões para {editingPermissionsUser.name}
+                    {editingPermissionsUser.name} ({editingPermissionsUser.email})
                   </AppText>
                 </View>
                 <TouchableOpacity onPress={() => setEditingPermissionsUser(null)}>
-                  <Ionicons name="close" size={22} color={colors.icon} />
+                  <Ionicons name="close" size={20} color={colors.icon} />
                 </TouchableOpacity>
               </View>
 
               <View style={[styles.detailSection, { borderTopColor: colors.border }]}>
-                <AppText variant="label" style={{ marginBottom: Spacing.xs, fontWeight: '700' }}>
-                  Atribuir Nível de Cargo (Role):
+                <AppText variant="caption" color="textSecondary" style={{ fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  SELECIONAR CARGO CORPORATIVO
                 </AppText>
 
-                <View style={styles.roleSelectionRow}>
-                  {[
-                    { role: 'admin', title: '👑 Super Admin', desc: 'Acesso total a usuários e VPS' },
-                    { role: 'member', title: '👤 Membro', desc: 'Acesso normal ao app' },
-                    { role: 'guest', title: '🌐 Convidado', desc: 'Acesso limitado em demonstração' },
-                  ].map((r) => {
-                    const isSelected = userRole === r.role;
-                    return (
-                      <TouchableOpacity
-                        key={r.role}
-                        style={[
-                          styles.roleOptionCard,
-                          {
-                            backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.15)' : colors.surface,
-                            borderColor: isSelected ? '#8B5CF6' : colors.border,
-                          },
-                        ]}
-                        onPress={() => setUserRole(r.role as UserRole)}
-                        activeOpacity={0.7}
-                      >
-                        <AppText variant="bodyMedium" style={{ fontWeight: '700', color: isSelected ? '#8B5CF6' : colors.text }}>
+                {[
+                  { role: 'admin', title: 'Super Administrator', desc: 'Acesso total a usuários, VPS e banco de dados' },
+                  { role: 'manager', title: 'Gestor de Hábitos', desc: 'Permissão para editar hábitos e relatórios' },
+                  { role: 'member', title: 'Membro Padrão', desc: 'Acesso normal via aplicativo mobile' },
+                ].map((r) => {
+                  const isSelected = userRole === r.role;
+                  return (
+                    <TouchableOpacity
+                      key={r.role}
+                      style={[
+                        styles.roleCardOption,
+                        {
+                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : colors.surface,
+                          borderColor: isSelected ? '#2563EB' : colors.border,
+                        },
+                      ]}
+                      onPress={() => setUserRole(r.role as UserRole)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <AppText variant="bodyMedium" style={{ fontWeight: '700', color: isSelected ? '#2563EB' : colors.text }}>
                           {r.title}
                         </AppText>
                         <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
                           {r.desc}
                         </AppText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                      </View>
+                      {isSelected && <Ionicons name="checkmark-circle" size={18} color="#2563EB" />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              <View style={{ marginTop: Spacing.lg, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm }}>
+              <View style={{ marginTop: Spacing.md, flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.xs }}>
                 <AppButton label="Cancelar" variant="secondary" onPress={() => setEditingPermissionsUser(null)} />
-                <AppButton label="Salvar Alterações" variant="primary" onPress={handleSavePermissions} />
+                <AppButton label="Salvar Permissões" variant="primary" onPress={handleSavePermissions} />
               </View>
             </View>
           )}
@@ -615,216 +619,242 @@ export default function UsersScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md },
-  commandHeader: {
+  corpHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
-  titleContainer: {
-    flex: 1,
-  },
-  titleBadgeRow: {
+  breadcrumbRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  headerActionsGroup: {
+    flexDirection: 'row',
     gap: Spacing.xs,
   },
-  badgeAdmin: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-  },
-  badgeServer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-  },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#22C55E',
-  },
-  btnRefresh: {
+  btnCorpSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 8,
     borderRadius: Radius.md,
     borderWidth: 1,
   },
-  metricsGrid: {
+  btnCorpPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: Radius.md,
+  },
+  corpMetricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  metricCard: {
+  corpMetricCard: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 200,
     padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
   },
-  metricHeader: {
+  corpMetricTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  iconBox: {
-    width: 36,
-    height: 36,
+  corpIconBox: {
+    width: 34,
+    height: 34,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterSection: {
-    marginBottom: Spacing.md,
-  },
-  searchBox: {
+  metricSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
+    marginTop: 4,
+  },
+  badgeSuccess: {
+    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  corpToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.sm,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 240,
+    height: 38,
+    paddingHorizontal: Spacing.sm,
   },
   searchInput: {
     flex: 1,
-    marginLeft: Spacing.xs,
-    fontSize: 14,
+    marginLeft: 6,
+    fontSize: 13,
   },
-  roleFilterRow: {
+  filterGroup: {
     flexDirection: 'row',
-    gap: Spacing.xs,
-    paddingVertical: 4,
+    gap: 4,
   },
-  rolePill: {
+  corpFilterTab: {
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    borderRadius: Radius.full,
+    borderRadius: Radius.md,
     borderWidth: 1,
   },
-  usersListContainer: {
-    gap: Spacing.sm,
+  corpTableContainer: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  userCard: {
-    padding: Spacing.md,
-  },
-  blockedUserCard: {
-    opacity: 0.6,
-  },
-  userCardHeader: {
-    gap: Spacing.sm,
-  },
-  userAvatarSection: {
+  tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  thCell: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  tableBodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  tdCell: {
+    justifyContent: 'center',
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: 12,
   },
-  userNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    flexWrap: 'wrap',
-  },
-  roleTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  schedulePill: {
+  roleBadgeAdmin: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  scheduleText: {
+  roleBadgeAdminText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  roleBadgeMember: {
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  roleBadgeMemberText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
   },
-  cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: Spacing.xs,
-    paddingTop: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  statusActive: {
+    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  actionBtn: {
-    flexDirection: 'row',
+  statusActiveText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  statusBlocked: {
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  statusBlockedText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  btnCorpAction: {
+    padding: 6,
+    borderRadius: Radius.sm,
+  },
+  emptyTableState: {
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.md,
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
   },
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     padding: Spacing.base,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  modalCard: {
+  corpModalCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: Radius['2xl'],
-    padding: Spacing.xl,
-    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: 440,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
     ...Shadow.lg,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   detailSection: {
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 4,
   },
-  roleSelectionRow: {
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  roleOptionCard: {
-    padding: Spacing.md,
-    borderRadius: Radius.lg,
+  roleCardOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
     borderWidth: 1,
+    marginBottom: Spacing.xs,
   },
 });
