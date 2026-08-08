@@ -28,11 +28,9 @@ export const DEFAULT_PROFILE: UserProfile = {
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   try {
     const jsonStr = JSON.stringify(profile);
-    if (Platform.OS === 'web') {
-      try {
-        localStorage.setItem(PROFILE_KEY, jsonStr);
-      } catch (e) {}
-    } else {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(PROFILE_KEY, jsonStr);
+    } else if (Platform.OS !== 'web') {
       await SecureStore.setItemAsync(PROFILE_KEY, jsonStr);
     }
   } catch (error) {
@@ -46,11 +44,9 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
 export async function getUserProfile(): Promise<UserProfile> {
   try {
     let jsonStr: string | null = null;
-    if (Platform.OS === 'web') {
-      try {
-        jsonStr = localStorage.getItem(PROFILE_KEY);
-      } catch (e) {}
-    } else {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      jsonStr = window.localStorage.getItem(PROFILE_KEY);
+    } else if (Platform.OS !== 'web') {
       jsonStr = await SecureStore.getItemAsync(PROFILE_KEY);
     }
     if (jsonStr) {
