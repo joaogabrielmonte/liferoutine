@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
-import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, Image, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
+import { getUserProfile, UserProfile } from '@/services/storage';
+import { logoutUser } from '@/services/auth';
 import { Shadow, Radius, Spacing } from '@/constants/theme';
 
 function WebSidebarNav() {
@@ -13,6 +15,26 @@ function WebSidebarNav() {
   const { setTheme } = useThemeStore();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    getUserProfile().then((profile) => {
+      if (profile) {
+        setUserProfile(profile);
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      router.replace('/login');
+    } catch (e) {
+      console.warn('Logout error:', e);
+      router.replace('/login');
+    }
+  };
 
   const navSections = [
     {
@@ -37,23 +59,30 @@ function WebSidebarNav() {
     },
   ];
 
-  const sidebarBg = isDark ? '#091E42' : '#FFFFFF';
-  const sidebarBorder = isDark ? '#253858' : '#DFE1E6';
-  const activeBg = isDark ? '#172B4D' : '#EB5A46';
+  const userInitials = userProfile && userProfile.name
+    ? userProfile.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase()
+    : 'GM';
 
   return (
-    <View style={[styles.sidebar, { backgroundColor: sidebarBg, borderColor: sidebarBorder }]}>
-      {/* Brand Header */}
+    <View style={[styles.sidebar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+      {/* Brand Header with Official Mobile App Logo */}
       <View style={styles.sidebarBrand}>
-        <View style={[styles.logoSquare, { backgroundColor: '#0052CC' }]}>
-          <MaterialCommunityIcons name="lightning-bolt" size={22} color="#FFFFFF" />
-        </View>
+        <Image
+          source={require('../../../assets/images/icon.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 15, letterSpacing: -0.2 }}>
               LifeRoutine
             </AppText>
-            <View style={styles.crmPill}>
+            <View style={[styles.crmPill, { backgroundColor: colors.primary }]}>
               <AppText style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>CRM ADMIN</AppText>
             </View>
           </View>
@@ -84,9 +113,9 @@ function WebSidebarNav() {
                     styles.navItem,
                     {
                       backgroundColor: isSelected
-                        ? (isDark ? '#172B4D' : '#F4F5F7')
+                        ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.08)')
                         : 'transparent',
-                      borderLeftColor: isSelected ? '#0052CC' : 'transparent',
+                      borderLeftColor: isSelected ? colors.primary : 'transparent',
                     },
                   ]}
                   onPress={() => router.push(item.path as any)}
@@ -95,13 +124,13 @@ function WebSidebarNav() {
                   <Ionicons
                     name={(isSelected ? item.activeIcon : item.icon) as any}
                     size={16}
-                    color={isSelected ? '#0052CC' : (isDark ? '#A5ADBA' : '#6B778C')}
+                    color={isSelected ? colors.primary : colors.textSecondary}
                   />
                   <AppText
                     style={{
                       fontSize: 13,
                       fontWeight: isSelected ? '700' : '500',
-                      color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
+                      color: isSelected ? colors.text : colors.textSecondary,
                       marginLeft: 8,
                       flex: 1,
                     }}
@@ -115,37 +144,53 @@ function WebSidebarNav() {
         ))}
       </View>
 
-      {/* Footer Profile & Server Status */}
-      <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
-        <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: '#0052CC' }]}>
-            <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>GM</AppText>
+      {/* Footer Profile & Logout Button */}
+      <View style={[styles.sidebarFooter, { borderTopColor: colors.border }]}>
+        {/* Dynamic User Profile Card */}
+        <View style={[styles.crmProfileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+            <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>
+              {userInitials}
+            </AppText>
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
             <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
-              Gabriel Monte
+              {userProfile?.name || 'Gabriel Monte'}
             </AppText>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              Super Admin
+              {userProfile?.wakeTime ? `☀️ ${userProfile.wakeTime} • 🌙 ${userProfile.sleepTime || '23:00'}` : 'Super Admin'}
             </AppText>
           </View>
         </View>
 
+        {/* Status & Theme Row */}
         <View style={styles.bottomStatusRow}>
           <View style={styles.statusIndicator}>
-            <View style={styles.dotGreen} />
-            <AppText style={{ fontSize: 11, fontWeight: '600', color: '#00875A' }}>
-              PostgreSQL VPS Online
+            <View style={[styles.dotGreen, { backgroundColor: colors.success }]} />
+            <AppText style={{ fontSize: 11, fontWeight: '600', color: colors.success }}>
+              PostgreSQL Online
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
+            style={[styles.themeBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
           >
-            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
+            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={colors.icon} />
           </TouchableOpacity>
         </View>
+
+        {/* Botão de Sair (Logout Button) */}
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: colors.dangerLight, borderColor: 'rgba(239, 68, 68, 0.3)' }]}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
+          <AppText style={{ fontSize: 13, fontWeight: '700', color: colors.danger, marginLeft: 6 }}>
+            Sair da Conta
+          </AppText>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -273,15 +318,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  logoSquare: {
-    width: 34,
-    height: 34,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
   },
   crmPill: {
-    backgroundColor: '#0052CC',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 3,
@@ -342,12 +384,21 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00875A',
   },
   themeBtn: {
     padding: 5,
     borderRadius: 4,
     borderWidth: 1,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 4,
   },
   contentWrapper: {
     flex: 1,
