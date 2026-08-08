@@ -25,6 +25,7 @@ export function AdminTopBar() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Edit Profile Form State
@@ -66,13 +67,14 @@ export function AdminTopBar() {
     setIsEditModalOpen(false);
 
     if (Platform.OS === 'web') {
-      alert('✅ Perfil atualizado com sucesso!');
+      alert('Perfil atualizado com sucesso!');
     } else {
       Alert.alert('Sucesso', 'Perfil atualizado!');
     }
   };
 
   const handleLogout = async () => {
+    setIsDropdownOpen(false);
     await logoutUser();
     router.replace('/login');
   };
@@ -112,7 +114,7 @@ export function AdminTopBar() {
         {/* Clickable Profile Badge */}
         <TouchableOpacity
           style={[styles.profileBadge, { backgroundColor: cardBg, borderColor }]}
-          onPress={() => setIsEditModalOpen(true)}
+          onPress={() => setIsDropdownOpen(!isDropdownOpen)}
           activeOpacity={0.8}
         >
           <View style={[styles.avatarCircle, { backgroundColor: primaryBlue }]}>
@@ -121,37 +123,78 @@ export function AdminTopBar() {
             </AppText>
           </View>
           <View style={styles.profileTextCol}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <AppText style={{ fontWeight: '700', fontSize: 12 }}>
-                {profile?.name || 'Gabriel Monte'}
-              </AppText>
-              <Ionicons name="pencil" size={11} color={colors.textSecondary} />
-            </View>
+            <AppText style={{ fontWeight: '700', fontSize: 12 }}>
+              {profile?.name || 'Gabriel Monte'}
+            </AppText>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              ☀️ {profile?.wakeTime || '07:00'} • 🌙 {profile?.sleepTime || '23:00'}
+              Administrador
             </AppText>
           </View>
+          <Ionicons name="chevron-down" size={12} color={colors.textSecondary} style={{ marginLeft: 6 }} />
         </TouchableOpacity>
 
-        {/* Theme Toggle Button */}
-        <TouchableOpacity
-          onPress={() => setTheme(isDark ? 'light' : 'dark')}
-          style={[styles.actionIconBtn, { backgroundColor: cardBg, borderColor }]}
-        >
-          <Ionicons name={isDark ? 'moon' : 'sunny'} size={15} color={isDark ? '#F59E0B' : '#6B7280'} />
-        </TouchableOpacity>
+        {/* Dropdown Menu Overlay */}
+        {isDropdownOpen && (
+          <View style={[styles.dropdownMenu, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor }]}>
+            <Pressable style={styles.dropdownHeader} onPress={() => { setIsDropdownOpen(false); setIsEditModalOpen(true); }}>
+              <AppText style={{ fontWeight: '700', fontSize: 13 }}>{profile?.name || 'Gabriel Monte'}</AppText>
+              <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>Configurações de rotina</AppText>
+            </Pressable>
 
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2', borderColor: 'rgba(239, 68, 68, 0.3)' }]}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="log-out-outline" size={15} color="#EF4444" />
-          <AppText style={{ fontSize: 12, fontWeight: '700', color: '#EF4444', marginLeft: 4 }}>
-            Sair
-          </AppText>
-        </TouchableOpacity>
+            <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+            {/* Wake/Sleep Schedule Info (Using vector icons instead of Emojis) */}
+            <View style={styles.dropdownInfoRow}>
+              <Ionicons name="sunny-outline" size={14} color="#F59E0B" />
+              <AppText variant="caption" color="textSecondary" style={{ marginLeft: 6, fontSize: 12 }}>
+                Acorda: {profile?.wakeTime || '07:00'}
+              </AppText>
+            </View>
+
+            <View style={styles.dropdownInfoRow}>
+              <Ionicons name="moon-outline" size={14} color="#8B5CF6" />
+              <AppText variant="caption" color="textSecondary" style={{ marginLeft: 6, fontSize: 12 }}>
+                Dorme: {profile?.sleepTime || '23:00'}
+              </AppText>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+            {/* Dropdown Actions */}
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setIsDropdownOpen(false);
+                setIsEditModalOpen(true);
+              }}
+            >
+              <Ionicons name="settings-outline" size={15} color={colors.textSecondary} />
+              <AppText style={{ marginLeft: 8, fontSize: 13 }}>Editar Perfil</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setIsDropdownOpen(false);
+                setTheme(isDark ? 'light' : 'dark');
+              }}
+            >
+              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={15} color={colors.textSecondary} />
+              <AppText style={{ marginLeft: 8, fontSize: 13 }}>
+                Alterar Tema
+              </AppText>
+            </TouchableOpacity>
+
+            <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={15} color="#EF4444" />
+              <AppText style={{ marginLeft: 8, fontSize: 13, color: '#EF4444', fontWeight: '600' }}>
+                Sair
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Edit Profile Modal */}
@@ -250,6 +293,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 999,
   },
   leftSection: {
     flexDirection: 'row',
@@ -274,6 +318,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    position: 'relative',
   },
   profileBadge: {
     flexDirection: 'row',
@@ -292,6 +337,37 @@ const styles = StyleSheet.create({
   },
   profileTextCol: {
     marginLeft: 8,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 42,
+    right: 0,
+    width: 220,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: 6,
+    zIndex: 1000,
+    ...(Platform.OS === 'web' ? ({ boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' } as any) : {}),
+  },
+  dropdownHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  dropdownInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 4,
   },
   actionIconBtn: {
     padding: 8,

@@ -144,9 +144,16 @@ export default function HomeScreen() {
               <AppText variant="h2" style={{ fontWeight: '700', fontSize: 24, marginTop: 4, color: openTicketsCount > 0 ? '#DE350B' : colors.text }}>
                 {openTicketsCount} {openTicketsCount === 1 ? 'Chamado' : 'Chamados'}
               </AppText>
-              <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
-                {openTicketsCount > 0 ? '⚠️ Requer atenção do admin' : '✅ Todos chamados resolvidos'}
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Ionicons
+                  name={openTicketsCount > 0 ? "alert-circle-outline" : "checkmark-circle-outline"}
+                  size={14}
+                  color={openTicketsCount > 0 ? '#DE350B' : '#00875A'}
+                />
+                <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                  {openTicketsCount > 0 ? 'Requer atenção do admin' : 'Todos chamados resolvidos'}
+                </AppText>
+              </View>
             </View>
 
             <View style={[styles.crmMetricBox, { backgroundColor: cardBg, borderColor }]}>
@@ -210,13 +217,29 @@ export default function HomeScreen() {
                               {
                                 backgroundColor:
                                   t.status === 'open'
-                                    ? 'rgba(222, 53, 11, 0.15)'
+                                    ? 'rgba(222, 53, 11, 0.12)'
                                     : t.status === 'in_progress'
-                                    ? 'rgba(255, 171, 0, 0.15)'
-                                    : 'rgba(0, 135, 90, 0.15)',
+                                    ? 'rgba(255, 171, 0, 0.12)'
+                                    : 'rgba(0, 135, 90, 0.12)',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
                               },
                             ]}
                           >
+                            <View
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: 3,
+                                backgroundColor:
+                                  t.status === 'open'
+                                    ? '#DE350B'
+                                    : t.status === 'in_progress'
+                                    ? '#FFAB00'
+                                    : '#00875A',
+                              }}
+                            />
                             <AppText
                               style={{
                                 fontSize: 10,
@@ -230,10 +253,10 @@ export default function HomeScreen() {
                               }}
                             >
                               {t.status === 'open'
-                                ? '🔴 Pendente'
+                                ? 'Pendente'
                                 : t.status === 'in_progress'
-                                ? '🟡 Em Atendimento'
-                                : '🟢 Concluído'}
+                                ? 'Em Atendimento'
+                                : 'Concluído'}
                             </AppText>
                           </View>
                         </View>
@@ -285,7 +308,7 @@ export default function HomeScreen() {
               <View style={[styles.flagItem, { borderColor }]}>
                 <View style={{ flex: 1 }}>
                   <AppText style={{ fontWeight: '600', fontSize: 13 }}>
-                    📊 Tela de Analytics & Relatórios Avançados
+                    Tela de Analytics & Relatórios Avançados
                   </AppText>
                   <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
                     Permite aos usuários verem o calendário de consistência e estatísticas.
@@ -301,7 +324,7 @@ export default function HomeScreen() {
               <View style={[styles.flagItem, { borderColor }]}>
                 <View style={{ flex: 1 }}>
                   <AppText style={{ fontWeight: '600', fontSize: 13 }}>
-                    🤖 Assistente de Rotina Inteligente (IA)
+                    Assistente de Rotina Inteligente (IA)
                   </AppText>
                   <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
                     Sugestões automáticas baseadas nos horários de acordar e dormir.
@@ -317,7 +340,7 @@ export default function HomeScreen() {
               <View style={[styles.flagItem, { borderColor }]}>
                 <View style={{ flex: 1 }}>
                   <AppText style={{ fontWeight: '600', fontSize: 13 }}>
-                    ☁️ Sincronização Cloud Automática (VPS)
+                    Sincronização Cloud Automática (VPS)
                   </AppText>
                   <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
                     Sincroniza imediatamente com o banco PostgreSQL no servidor Oracle.

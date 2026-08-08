@@ -278,9 +278,9 @@ export default function ProfileScreen() {
     if (enabled) {
       const granted = await requestNotificationPermissions();
       if (granted) {
-        await scheduleHabitReminder('water-daily', 'Hora de beber água! 💧', 'Mantenha sua hidratação em dia.', 10, 0);
-        await scheduleHabitReminder('exercise-daily', 'Hora do seu treino! ⚡', 'Complete sua meta diária de exercícios.', 17, 0);
-        Alert.alert('Notificações Ativadas! 🔔', 'Você receberá lembretes diários para manter sua rotina.');
+        await scheduleHabitReminder('water-daily', 'Hora de beber água!', 'Mantenha sua hidratação em dia.', 10, 0);
+        await scheduleHabitReminder('exercise-daily', 'Hora do seu treino!', 'Complete sua meta diária de exercícios.', 17, 0);
+        Alert.alert('Notificações Ativadas!', 'Você receberá lembretes diários para manter sua rotina.');
       } else {
         Alert.alert('Permissão Necessária', 'Ative as permissões de notificação nas configurações do seu celular.');
       }
