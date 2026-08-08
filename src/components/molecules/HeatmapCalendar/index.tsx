@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { AppText } from '@/components/atoms/AppText';
 import { Radius, Spacing } from '@/constants/theme';
@@ -14,11 +15,22 @@ type HeatmapCalendarProps = {
 export function HeatmapCalendar({ logs, totalActiveHabitsCount, onSelectDay }: HeatmapCalendarProps) {
   const { colors, isDark } = useTheme();
 
-  // Generate days for the current month (e.g. 30 days)
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  // State for navigating previous/next months
+  const [displayDate, setDisplayDate] = useState<Date>(new Date());
+
+  const year = displayDate.getFullYear();
+  const month = displayDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const handlePrevMonth = () => {
+    const prev = new Date(year, month - 1, 1);
+    setDisplayDate(prev);
+  };
+
+  const handleNextMonth = () => {
+    const next = new Date(year, month + 1, 1);
+    setDisplayDate(next);
+  };
 
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => {
     const dayNum = i + 1;
@@ -46,35 +58,54 @@ export function HeatmapCalendar({ logs, totalActiveHabitsCount, onSelectDay }: H
   const getCellColor = (intensity: number) => {
     switch (intensity) {
       case 4:
-        return '#22C55E'; // 100% vibrant green
+        return '#22C55E'; // 100% green
       case 3:
         return '#4ADE80'; // 75% green
       case 2:
-        return '#86EFAC'; // 50% light green
+        return '#86EFAC'; // 50% green
       case 1:
-        return '#BBF7D0'; // 25% pale green
+        return '#BBF7D0'; // 25% green
       default:
         return isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9';
     }
   };
 
-  const monthName = today.toLocaleString('pt-BR', { month: 'long' });
+  const monthName = displayDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const isCurrentMonth = displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear();
 
   return (
     <View style={styles.container}>
+      {/* Header Row with Month Navigation Controls */}
       <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={handlePrevMonth}
+          style={[styles.navBtn, { borderColor: colors.border }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={16} color={colors.text} />
+        </TouchableOpacity>
+
         <AppText variant="subtitle" style={{ textTransform: 'capitalize', fontWeight: '700' }}>
-          Consistência em {monthName}
+          {monthName}
         </AppText>
-        <AppText variant="caption" color="textSecondary">
-          Toque em um dia para ver o histórico
-        </AppText>
+
+        <TouchableOpacity
+          onPress={handleNextMonth}
+          style={[styles.navBtn, { borderColor: colors.border }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-forward" size={16} color={colors.text} />
+        </TouchableOpacity>
       </View>
+
+      <AppText variant="caption" color="textSecondary" align="center" style={{ marginBottom: 12, fontSize: 11 }}>
+        Toque em qualquer dia para ver o histórico detalhado
+      </AppText>
 
       <View style={styles.grid}>
         {daysArray.map(({ dayNum, dateKey, intensity }) => {
           const bg = getCellColor(intensity);
-          const isToday = dayNum === today.getDate();
+          const isToday = isCurrentMonth && dayNum === new Date().getDate();
 
           return (
             <TouchableOpacity
@@ -128,7 +159,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  navBtn: {
+    padding: 6,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   grid: {
     flexDirection: 'row',
@@ -154,8 +190,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   legendCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 2,
   },
 });

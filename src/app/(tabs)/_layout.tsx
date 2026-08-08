@@ -247,6 +247,7 @@ export default function TabLayout() {
             name="users"
             options={{
               title: 'Usuários',
+              href: isWebLayout ? undefined : null,
               tabBarIcon: ({ color, size, focused }) => (
                 <Ionicons
                   name={focused ? 'people' : 'people-outline'}

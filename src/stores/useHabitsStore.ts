@@ -390,6 +390,38 @@ export function useTodayHabits(): HabitWithLogs[] {
   });
 }
 
+export function useHabitsForDate(targetDate: string): HabitWithLogs[] {
+  const habits = useHabitsStore((state) => state.habits);
+  const logs = useHabitsStore((state) => state.logs);
+
+  const dateParts = targetDate.split('-').map(Number);
+  const targetDateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+  const targetDow = targetDateObj.getDay();
+
+  const filteredHabits = habits.filter(
+    (h) => !h.archivedAt && h.targetDays.includes(targetDow)
+  );
+
+  return filteredHabits.map((habit) => {
+    const habitLogs = logs.filter((l) => l.habitId === habit.id);
+    const dateLog = habitLogs.find((l) => l.date === targetDate);
+    const isCompletedToday = (dateLog?.completedCount ?? 0) >= habit.targetCount;
+
+    const streakStats = calculateHabitStreakStats(habitLogs, habit.targetCount);
+
+    return {
+      ...habit,
+      streak: streakStats.currentStreak,
+      bestStreak: streakStats.bestStreak,
+      logs: habitLogs,
+      todayLog: dateLog,
+      isCompletedToday,
+      completionRate: isCompletedToday ? 1 : 0,
+    };
+  });
+}
+
+
 export function useTodayCompletion(): number {
   const habits = useTodayHabits();
   if (habits.length === 0) return 0;
