@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { AppText } from '@/components/atoms/AppText';
@@ -153,7 +153,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: Spacing.sm,
-    paddingRight: Spacing.base,
+    paddingRight: 32,
+    ...(Platform.OS === 'web'
+      ? {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          paddingRight: 0,
+        }
+      : {}),
   },
   badgeCard: {
     width: 156,

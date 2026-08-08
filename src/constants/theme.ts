@@ -60,6 +60,15 @@ export const Palette = {
   neutral900: '#0F172A',
   neutral950: '#020617',
 
+  // LifeRoutine Web Design System Tokens
+  webObsidian: '#0D1117',
+  webGraphite: '#161B22',
+  webBorder: '#30363D',
+  webAmber: '#F59E0B',
+  webEmerald: '#10B981',
+  webTextPrimary: '#F0F6FC',
+  webTextSecondary: '#8B949E',
+
   // Pure
   white: '#FFFFFF',
   black: '#000000',

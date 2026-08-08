@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -145,144 +146,288 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        {/* Progress Card */}
-        <Animated.View entering={FadeInDown.delay(100).duration(500)}>
-          <AppCard
-            style={[
-              styles.progressCard,
-              {
-                backgroundColor: isDark
-                  ? colors.surfaceElevated
-                  : colors.primary,
-              },
-            ]}
-            elevated
-          >
-            <View style={styles.progressRow}>
-              <View style={styles.progressTextCol}>
-                <AppText
-                  variant="caption"
-                  style={{
-                    color: isDark ? colors.primary : Palette.primary100,
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                  }}
+        {/* On Web, prioritize Actionable Today Habits at top */}
+        {Platform.OS === 'web' ? (
+          <>
+            {/* Hábitos de hoje (Ação imediata) */}
+            <Animated.View
+              entering={FadeInDown.delay(100).duration(500)}
+              style={styles.section}
+            >
+              <View style={styles.sectionHeader}>
+                <AppText variant="title">Hábitos de Hoje</AppText>
+                <TouchableOpacity
+                  onPress={() => setIsCreateModalOpen(true)}
+                  style={[
+                    styles.addBtn,
+                    { backgroundColor: colors.primaryLight },
+                  ]}
                 >
-                  {progressLabel}
-                </AppText>
-                <AppText
-                  variant="h2"
-                  style={{
-                    color: isDark ? colors.text : '#FFFFFF',
-                    marginTop: 4,
-                  }}
-                >
-                  {completedCount} de {totalCount} hábitos
-                </AppText>
-
-                <AppText
-                  variant="caption"
-                  style={{
-                    color: isDark ? colors.textSecondary : Palette.primary200,
-                    marginTop: 4,
-                  }}
-                >
-                  {progressPercent === 100
-                    ? 'Parabéns! Meta do dia atingida!'
-                    : `Faltam ${totalCount - completedCount} hábitos para concluir hoje`}
-                </AppText>
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <AppText
+                    style={{
+                      color: colors.primary,
+                      fontSize: 13,
+                      fontWeight: '600',
+                      marginLeft: 4,
+                    }}
+                  >
+                    Novo
+                  </AppText>
+                </TouchableOpacity>
               </View>
 
-              <ProgressRing
-                progress={completion}
-                size={80}
-                strokeWidth={8}
-                color={isDark ? colors.primary : '#FFFFFF'}
-                label={`${progressPercent}%`}
-              />
-            </View>
+              {todayHabits.length === 0 ? (
+                <AppCard style={styles.emptyCard}>
+                  <Ionicons
+                    name="leaf-outline"
+                    size={32}
+                    color={colors.textSecondary}
+                    style={{ marginBottom: Spacing.sm }}
+                  />
+                  <AppText variant="body" color="textSecondary" align="center">
+                    Nenhum hábito para hoje.{'\n'}Adicione um novo hábito!
+                  </AppText>
+                </AppCard>
+              ) : (
+                todayHabits.map((habit, i) => (
+                  <Animated.View
+                    key={habit.id}
+                    entering={FadeInDown.delay(150 + i * 60).duration(400)}
+                  >
+                    <HabitCard
+                      habit={habit}
+                      onPress={() => handleHabitPress(habit)}
+                      onLongPress={() => setSelectedOptionHabit(habit)}
+                      onOptionsPress={() => setSelectedOptionHabit(habit)}
+                    />
+                  </Animated.View>
+                ))
+              )}
+            </Animated.View>
 
-            {/* Mini progress bar */}
-            <View
-              style={[
-                styles.miniProgressTrack,
-                { backgroundColor: 'rgba(255,255,255,0.2)' },
-              ]}
-            >
-              <View
+            {/* Progress Card */}
+            <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+              <AppCard
                 style={[
-                  styles.miniProgressFill,
+                  styles.progressCard,
                   {
-                    width: `${progressPercent}%`,
-                    backgroundColor: isDark ? colors.primary : '#FFFFFF',
+                    backgroundColor: isDark
+                      ? colors.surfaceElevated
+                      : colors.primary,
                   },
                 ]}
-              />
-            </View>
-          </AppCard>
-        </Animated.View>
+                elevated
+              >
+                <View style={styles.progressRow}>
+                  <View style={styles.progressTextCol}>
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: isDark ? colors.primary : Palette.primary100,
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {progressLabel}
+                    </AppText>
+                    <AppText
+                      variant="h2"
+                      style={{
+                        color: isDark ? colors.text : '#FFFFFF',
+                        marginTop: 4,
+                      }}
+                    >
+                      {completedCount} de {totalCount} hábitos
+                    </AppText>
 
-        {/* Badges & Achievements Section */}
-        <Animated.View entering={FadeInDown.delay(150).duration(500)}>
-          <BadgesSection habits={todayHabits} />
-        </Animated.View>
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: isDark ? colors.textSecondary : Palette.primary200,
+                        marginTop: 4,
+                      }}
+                    >
+                      {progressPercent === 100
+                        ? 'Parabéns! Meta do dia atingida!'
+                        : `Faltam ${totalCount - completedCount} hábitos para concluir hoje`}
+                    </AppText>
+                  </View>
 
-        {/* Hábitos de hoje */}
-        <Animated.View
-          entering={FadeInDown.delay(200).duration(500)}
-          style={styles.section}
-        >
-          <View style={styles.sectionHeader}>
-            <AppText variant="title">Hábitos de Hoje</AppText>
-            <TouchableOpacity
-              onPress={() => setIsCreateModalOpen(true)}
-              style={[
-                styles.addBtn,
-                { backgroundColor: colors.primaryLight },
-              ]}
+                  <ProgressRing
+                    progress={completion}
+                    size={80}
+                    strokeWidth={8}
+                    color={isDark ? colors.primary : '#FFFFFF'}
+                    label={`${progressPercent}%`}
+                  />
+                </View>
+
+                {/* Mini progress bar */}
+                <View
+                  style={[
+                    styles.miniProgressTrack,
+                    { backgroundColor: 'rgba(255,255,255,0.2)' },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.miniProgressFill,
+                      {
+                        width: `${progressPercent}%`,
+                        backgroundColor: isDark ? colors.primary : '#FFFFFF',
+                      },
+                    ]}
+                  />
+                </View>
+              </AppCard>
+            </Animated.View>
+
+            {/* Badges & Achievements Section */}
+            <Animated.View entering={FadeInDown.delay(250).duration(500)}>
+              <BadgesSection habits={todayHabits} />
+            </Animated.View>
+          </>
+        ) : (
+          <>
+            {/* Mobile Layout untouched */}
+            <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+              <AppCard
+                style={[
+                  styles.progressCard,
+                  {
+                    backgroundColor: isDark
+                      ? colors.surfaceElevated
+                      : colors.primary,
+                  },
+                ]}
+                elevated
+              >
+                <View style={styles.progressRow}>
+                  <View style={styles.progressTextCol}>
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: isDark ? colors.primary : Palette.primary100,
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {progressLabel}
+                    </AppText>
+                    <AppText
+                      variant="h2"
+                      style={{
+                        color: isDark ? colors.text : '#FFFFFF',
+                        marginTop: 4,
+                      }}
+                    >
+                      {completedCount} de {totalCount} hábitos
+                    </AppText>
+
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: isDark ? colors.textSecondary : Palette.primary200,
+                        marginTop: 4,
+                      }}
+                    >
+                      {progressPercent === 100
+                        ? 'Parabéns! Meta do dia atingida!'
+                        : `Faltam ${totalCount - completedCount} hábitos para concluir hoje`}
+                    </AppText>
+                  </View>
+
+                  <ProgressRing
+                    progress={completion}
+                    size={80}
+                    strokeWidth={8}
+                    color={isDark ? colors.primary : '#FFFFFF'}
+                    label={`${progressPercent}%`}
+                  />
+                </View>
+
+                {/* Mini progress bar */}
+                <View
+                  style={[
+                    styles.miniProgressTrack,
+                    { backgroundColor: 'rgba(255,255,255,0.2)' },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.miniProgressFill,
+                      {
+                        width: `${progressPercent}%`,
+                        backgroundColor: isDark ? colors.primary : '#FFFFFF',
+                      },
+                    ]}
+                  />
+                </View>
+              </AppCard>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(150).duration(500)}>
+              <BadgesSection habits={todayHabits} />
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeInDown.delay(200).duration(500)}
+              style={styles.section}
             >
-              <Ionicons name="add" size={16} color={colors.primary} />
-              <AppText
-                style={{
-                  color: colors.primary,
-                  fontSize: 13,
-                  fontWeight: '600',
-                  marginLeft: 4,
-                }}
-              >
-                Novo
-              </AppText>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.sectionHeader}>
+                <AppText variant="title">Hábitos de Hoje</AppText>
+                <TouchableOpacity
+                  onPress={() => setIsCreateModalOpen(true)}
+                  style={[
+                    styles.addBtn,
+                    { backgroundColor: colors.primaryLight },
+                  ]}
+                >
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <AppText
+                    style={{
+                      color: colors.primary,
+                      fontSize: 13,
+                      fontWeight: '600',
+                      marginLeft: 4,
+                    }}
+                  >
+                    Novo
+                  </AppText>
+                </TouchableOpacity>
+              </View>
 
-          {todayHabits.length === 0 ? (
-            <AppCard style={styles.emptyCard}>
-              <Ionicons
-                name="leaf-outline"
-                size={32}
-                color={colors.textSecondary}
-                style={{ marginBottom: Spacing.sm }}
-              />
-              <AppText variant="body" color="textSecondary" align="center">
-                Nenhum hábito para hoje.{'\n'}Adicione um novo hábito!
-              </AppText>
-            </AppCard>
-          ) : (
-            todayHabits.map((habit, i) => (
-              <Animated.View
-                key={habit.id}
-                entering={FadeInDown.delay(250 + i * 60).duration(400)}
-              >
-                <HabitCard
-                  habit={habit}
-                  onPress={() => handleHabitPress(habit)}
-                  onLongPress={() => setSelectedOptionHabit(habit)}
-                  onOptionsPress={() => setSelectedOptionHabit(habit)}
-                />
-              </Animated.View>
-            ))
-          )}
-        </Animated.View>
+              {todayHabits.length === 0 ? (
+                <AppCard style={styles.emptyCard}>
+                  <Ionicons
+                    name="leaf-outline"
+                    size={32}
+                    color={colors.textSecondary}
+                    style={{ marginBottom: Spacing.sm }}
+                  />
+                  <AppText variant="body" color="textSecondary" align="center">
+                    Nenhum hábito para hoje.{'\n'}Adicione um novo hábito!
+                  </AppText>
+                </AppCard>
+              ) : (
+                todayHabits.map((habit, i) => (
+                  <Animated.View
+                    key={habit.id}
+                    entering={FadeInDown.delay(250 + i * 60).duration(400)}
+                  >
+                    <HabitCard
+                      habit={habit}
+                      onPress={() => handleHabitPress(habit)}
+                      onLongPress={() => setSelectedOptionHabit(habit)}
+                      onOptionsPress={() => setSelectedOptionHabit(habit)}
+                    />
+                  </Animated.View>
+                ))
+              )}
+            </Animated.View>
+          </>
+        )}
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
