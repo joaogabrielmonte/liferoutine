@@ -4,29 +4,16 @@ import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, Imag
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AdminTopBar } from '@/components/organisms/AdminTopBar';
-import { logoutUser } from '@/services/auth';
 import { Shadow } from '@/constants/theme';
 
 function WebSidebarNav() {
   const { colors, isDark } = useTheme();
-  const { setTheme } = useThemeStore();
   const router = useRouter();
   const pathname = usePathname();
 
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-      router.replace('/login');
-    } catch (e) {
-      console.warn('Logout error:', e);
-      router.replace('/login');
-    }
-  };
 
   const navSections = [
     {
@@ -51,9 +38,9 @@ function WebSidebarNav() {
     },
   ];
 
-  const sidebarBg = isDark ? '#091E42' : '#FFFFFF';
-  const sidebarBorder = isDark ? '#253858' : '#DFE1E6';
-  const primaryColor = '#0052CC';
+  const sidebarBg = isDark ? '#111827' : '#FFFFFF';
+  const sidebarBorder = isDark ? '#1F2937' : '#E5E7EB';
+  const primaryColor = '#2563EB';
 
   return (
     <View
@@ -71,7 +58,7 @@ function WebSidebarNav() {
           : {},
       ]}
     >
-      {/* Sidebar Header with Mobile Logo */}
+      {/* Sidebar Header with Mobile Logo & Collapse Toggle */}
       <View style={styles.topHeaderWrapper}>
         <View style={[styles.sidebarBrand, isCollapsed && styles.sidebarBrandCollapsed]}>
           <Image
@@ -81,12 +68,10 @@ function WebSidebarNav() {
           />
 
           {!isCollapsed && (
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, letterSpacing: -0.2 }}>
-                  LifeRoutine Admin
-                </AppText>
-              </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, letterSpacing: -0.2 }}>
+                LifeRoutine Admin
+              </AppText>
               <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
                 Painel de Controle
               </AppText>
@@ -95,14 +80,14 @@ function WebSidebarNav() {
 
           {/* Toggle Collapse Button (< >) */}
           <TouchableOpacity
-            style={[styles.collapseBtn, { backgroundColor: isDark ? '#172B4D' : '#F4F5F7', borderColor: sidebarBorder }]}
+            style={[styles.collapseBtn, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6', borderColor: sidebarBorder }]}
             onPress={() => setIsCollapsed(!isCollapsed)}
             activeOpacity={0.7}
           >
             <Ionicons
               name={isCollapsed ? 'chevron-forward' : 'chevron-back'}
               size={14}
-              color={isDark ? '#FAFBFC' : '#091E42'}
+              color={isDark ? '#F9FAFB' : '#111827'}
             />
           </TouchableOpacity>
         </View>
@@ -132,7 +117,7 @@ function WebSidebarNav() {
                     isCollapsed && styles.navItemCollapsed,
                     {
                       backgroundColor: isSelected
-                        ? (isDark ? '#172B4D' : '#F4F5F7')
+                        ? (isDark ? '#1F2937' : '#EFF6FF')
                         : 'transparent',
                       borderLeftColor: isSelected ? primaryColor : 'transparent',
                     },
@@ -143,7 +128,7 @@ function WebSidebarNav() {
                   <Ionicons
                     name={(isSelected ? item.activeIcon : item.icon) as any}
                     size={18}
-                    color={isSelected ? primaryColor : (isDark ? '#A5ADBA' : '#6B778C')}
+                    color={isSelected ? primaryColor : (isDark ? '#9CA3AF' : '#6B7280')}
                   />
 
                   {!isCollapsed && (
@@ -151,8 +136,8 @@ function WebSidebarNav() {
                       style={{
                         fontSize: 13,
                         fontWeight: isSelected ? '700' : '500',
-                        color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
-                        marginLeft: 8,
+                        color: isSelected ? (isDark ? '#F9FAFB' : '#1E40AF') : (isDark ? '#9CA3AF' : '#6B7280'),
+                        marginLeft: 10,
                         flex: 1,
                       }}
                     >
@@ -166,47 +151,18 @@ function WebSidebarNav() {
         ))}
       </View>
 
-      {/* Footer Theme & Logout */}
+      {/* Clean Footer (No duplicate Logout / Theme buttons) */}
       <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
         {!isCollapsed ? (
-          <View style={styles.expandedFooterRow}>
-            <TouchableOpacity
-              onPress={() => setTheme(isDark ? 'light' : 'dark')}
-              style={[styles.themeBtnExpanded, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}
-            >
-              <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
-              <AppText variant="caption" style={{ marginLeft: 6, fontSize: 11, color: colors.textSecondary }}>
-                {isDark ? 'Modo Escuro' : 'Modo Claro'}
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
-              onPress={handleLogout}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={16} color="#DE350B" />
-              <AppText style={{ fontSize: 12, fontWeight: '700', color: '#DE350B', marginLeft: 4 }}>
-                Sair
-              </AppText>
-            </TouchableOpacity>
+          <View style={styles.footerBrandRow}>
+            <View style={styles.statusDot} />
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+              LifeRoutine v1.4.0 • Online
+            </AppText>
           </View>
         ) : (
-          <View style={styles.collapsedFooterRow}>
-            <TouchableOpacity
-              onPress={() => setTheme(isDark ? 'light' : 'dark')}
-              style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder, marginBottom: 8 }]}
-            >
-              <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={16} color={isDark ? '#A5ADBA' : '#6B778C'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.logoutBtnCollapsed, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
-              onPress={handleLogout}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={16} color="#DE350B" />
-            </TouchableOpacity>
+          <View style={{ alignItems: 'center' }}>
+            <View style={styles.statusDot} />
           </View>
         )}
       </View>
@@ -328,16 +284,15 @@ const styles = StyleSheet.create({
   sidebar: {
     height: '100%',
     borderRightWidth: 1,
-    padding: 12,
+    padding: 16,
     justifyContent: 'space-between',
   },
   topHeaderWrapper: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   sidebarBrandCollapsed: {
     justifyContent: 'center',
@@ -348,31 +303,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   collapseBtn: {
-    padding: 4,
-    borderRadius: 4,
+    padding: 5,
+    borderRadius: 6,
     borderWidth: 1,
     marginLeft: 6,
   },
   navList: {
     flex: 1,
-    gap: 14,
+    gap: 18,
   },
   navGroup: {
-    gap: 2,
+    gap: 3,
   },
   groupHeader: {
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,
-    marginBottom: 4,
-    paddingLeft: 6,
+    marginBottom: 6,
+    paddingLeft: 8,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 9,
-    borderRadius: 6,
+    borderRadius: 8,
     borderLeftWidth: 3,
   },
   navItemCollapsed: {
@@ -381,47 +336,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
   },
   sidebarFooter: {
-    paddingTop: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
   },
-  expandedFooterRow: {
+  footerBrandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 6,
   },
-  themeBtnExpanded: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    flex: 1,
-  },
-  themeBtn: {
-    padding: 6,
+  statusDot: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
-    borderWidth: 1,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  logoutBtnCollapsed: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  collapsedFooterRow: {
-    alignItems: 'center',
+    backgroundColor: '#10B981',
   },
   contentWrapper: {
     flex: 1,

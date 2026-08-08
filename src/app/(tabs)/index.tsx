@@ -91,8 +91,8 @@ export default function HomeScreen() {
     setTickets(updated);
   };
 
-  const cardBg = isDark ? '#172B4D' : '#FFFFFF';
-  const borderColor = isDark ? '#253858' : '#DFE1E6';
+  const cardBg = isDark ? '#111827' : '#FFFFFF';
+  const borderColor = isDark ? '#1F2937' : '#E5E7EB';
 
   if (isWeb) {
     // -------------------------------------------------------------
@@ -102,7 +102,7 @@ export default function HomeScreen() {
 
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
+        style={[styles.safe, { backgroundColor: isDark ? '#0B0F19' : '#F9FAFB' }]}
         edges={['top']}
       >
         <ScrollView

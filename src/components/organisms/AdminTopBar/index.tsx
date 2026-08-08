@@ -25,6 +25,7 @@ export function AdminTopBar() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Edit Profile Form State
   const [editName, setEditName] = useState('');
@@ -85,16 +86,25 @@ export function AdminTopBar() {
         .toUpperCase()
     : 'GM';
 
-  const cardBg = isDark ? '#172B4D' : '#FFFFFF';
-  const borderColor = isDark ? '#253858' : '#DFE1E6';
-  const primaryBlue = '#0052CC';
+  const topBarBg = isDark ? '#111827' : '#FFFFFF';
+  const borderColor = isDark ? '#1F2937' : '#E5E7EB';
+  const cardBg = isDark ? '#1F2937' : '#F3F4F6';
+  const primaryBlue = '#2563EB';
 
   return (
-    <View style={[styles.topBarContainer, { backgroundColor: isDark ? '#091E42' : '#FFFFFF', borderBottomColor: borderColor }]}>
-      <View style={styles.leftTitleRow}>
-        <AppText variant="caption" color="textSecondary" style={{ fontSize: 12 }}>
-          LifeRoutine Admin Control Panel
-        </AppText>
+    <View style={[styles.topBarContainer, { backgroundColor: topBarBg, borderBottomColor: borderColor }]}>
+      {/* Left Search Bar / Breadcrumb */}
+      <View style={styles.leftSection}>
+        <View style={[styles.searchBox, { backgroundColor: cardBg, borderColor }]}>
+          <Ionicons name="search-outline" size={15} color={colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Buscar por usuários, chamados ou tabelas..."
+            placeholderTextColor={colors.textTertiary}
+          />
+        </View>
       </View>
 
       {/* TOP RIGHT (CANTO SUPERIOR DIREITO) USER PROFILE BADGE & CONTROLS */}
@@ -115,7 +125,7 @@ export function AdminTopBar() {
               <AppText style={{ fontWeight: '700', fontSize: 12 }}>
                 {profile?.name || 'Gabriel Monte'}
               </AppText>
-              <Ionicons name="create-outline" size={12} color={colors.textSecondary} />
+              <Ionicons name="pencil" size={11} color={colors.textSecondary} />
             </View>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
               ☀️ {profile?.wakeTime || '07:00'} • 🌙 {profile?.sleepTime || '23:00'}
@@ -128,17 +138,17 @@ export function AdminTopBar() {
           onPress={() => setTheme(isDark ? 'light' : 'dark')}
           style={[styles.actionIconBtn, { backgroundColor: cardBg, borderColor }]}
         >
-          <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={15} color={isDark ? '#FAFBFC' : '#091E42'} />
+          <Ionicons name={isDark ? 'moon' : 'sunny'} size={15} color={isDark ? '#F59E0B' : '#6B7280'} />
         </TouchableOpacity>
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
+          style={[styles.logoutBtn, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2', borderColor: 'rgba(239, 68, 68, 0.3)' }]}
           onPress={handleLogout}
           activeOpacity={0.8}
         >
-          <Ionicons name="log-out-outline" size={15} color="#DE350B" />
-          <AppText style={{ fontSize: 12, fontWeight: '700', color: '#DE350B', marginLeft: 4 }}>
+          <Ionicons name="log-out-outline" size={15} color="#EF4444" />
+          <AppText style={{ fontSize: 12, fontWeight: '700', color: '#EF4444', marginLeft: 4 }}>
             Sair
           </AppText>
         </TouchableOpacity>
@@ -154,7 +164,7 @@ export function AdminTopBar() {
         <View style={styles.overlay}>
           <Pressable style={styles.backdrop} onPress={() => setIsEditModalOpen(false)} />
 
-          <View style={[styles.modalCard, { backgroundColor: cardBg, borderColor }]}>
+          <View style={[styles.modalCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor }]}>
             <View style={styles.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="person-circle-outline" size={22} color={primaryBlue} />
@@ -175,7 +185,7 @@ export function AdminTopBar() {
             <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>
               NOME DO ADMINISTRADOR
             </AppText>
-            <View style={[styles.inputBox, { borderColor }]}>
+            <View style={[styles.inputBox, { borderColor, backgroundColor: cardBg }]}>
               <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -192,7 +202,7 @@ export function AdminTopBar() {
                 <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>
                   HORÁRIO DE ACORDAR
                 </AppText>
-                <View style={[styles.inputBox, { borderColor }]}>
+                <View style={[styles.inputBox, { borderColor, backgroundColor: cardBg }]}>
                   <Ionicons name="sunny-outline" size={16} color="#F59E0B" />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
@@ -208,7 +218,7 @@ export function AdminTopBar() {
                 <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>
                   HORÁRIO DE DORMIR
                 </AppText>
-                <View style={[styles.inputBox, { borderColor }]}>
+                <View style={[styles.inputBox, { borderColor, backgroundColor: cardBg }]}>
                   <Ionicons name="moon-outline" size={16} color="#8B5CF6" />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
@@ -234,16 +244,31 @@ export function AdminTopBar() {
 
 const styles = StyleSheet.create({
   topBarContainer: {
-    height: 54,
+    height: 56,
     borderBottomWidth: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  leftTitleRow: {
+  leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 320,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 6,
+    fontSize: 12,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   topRightRow: {
     flexDirection: 'row',
@@ -259,9 +284,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   avatarCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -269,7 +294,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionIconBtn: {
-    padding: 7,
+    padding: 8,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
@@ -278,8 +303,8 @@ const styles = StyleSheet.create({
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -287,7 +312,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(9, 30, 66, 0.65)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 16,
   },
   backdrop: {
@@ -297,7 +322,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     borderRadius: 12,
-    padding: 18,
+    padding: 20,
     borderWidth: 1,
   },
   modalHeader: {
