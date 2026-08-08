@@ -136,7 +136,6 @@ function WebSidebarNav() {
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
             style={[styles.themeBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
-            title="Alternar Tema"
           >
             <Ionicons name={isDark ? 'moon' : 'sunny'} size={14} color={colors.text} />
           </TouchableOpacity>

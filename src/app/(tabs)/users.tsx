@@ -430,7 +430,6 @@ export default function UsersScreen() {
                     <TouchableOpacity
                       style={[styles.btnCorpAction, { backgroundColor: colors.surface }]}
                       onPress={() => setSelectedUser(user)}
-                      title="Ver Detalhes"
                     >
                       <Ionicons name="eye-outline" size={14} color={colors.text} />
                     </TouchableOpacity>
@@ -441,7 +440,6 @@ export default function UsersScreen() {
                         setEditingPermissionsUser(user);
                         setUserRole(user.role || 'member');
                       }}
-                      title="Permissões"
                     >
                       <Ionicons name="key-outline" size={14} color="#2563EB" />
                     </TouchableOpacity>
@@ -452,7 +450,6 @@ export default function UsersScreen() {
                         { backgroundColor: user.isBlocked ? 'rgba(5, 150, 105, 0.1)' : 'rgba(220, 38, 38, 0.1)' },
                       ]}
                       onPress={() => toggleUserBlock(user.id)}
-                      title={user.isBlocked ? 'Desbloquear' : 'Bloquear'}
                     >
                       <Ionicons
                         name={user.isBlocked ? 'checkmark-circle-outline' : 'ban-outline'}
