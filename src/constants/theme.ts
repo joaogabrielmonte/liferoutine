@@ -213,11 +213,16 @@ export type SpacingKey = keyof typeof Spacing;
 // TYPOGRAPHY — Inter
 // ─────────────────────────────────────────────
 
+const systemSansFont = Platform.select({
+  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  default: undefined,
+});
+
 export const FontFamily = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semiBold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
+  regular: systemSansFont,
+  medium: systemSansFont,
+  semiBold: systemSansFont,
+  bold: systemSansFont,
 } as const;
 
 export const FontSize = {
