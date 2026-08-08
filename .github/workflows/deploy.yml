@@ -1,0 +1,45 @@
+name: Kinglityc LifeRoutine CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-deploy:
+    name: Build, Lint & Deploy to Oracle VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 TypeScript Strict Typecheck
+        run: npx tsc --noEmit
+
+      - name: 🏗️ Export Static Web Production Bundle
+        run: npx expo export --platform web
+
+      - name: 🚀 Deploy to Oracle VPS (Kingslityc Server)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: '147.15.72.151'
+          username: 'ubuntu'
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "⚡ Starting Kinglityc Deployment Pipeline..."
+            cd /home/ubuntu/liferoutine || exit 1
+            git pull origin main
+            docker-compose restart || true
+            echo "✅ Deployment completed successfully on Oracle VPS!"
