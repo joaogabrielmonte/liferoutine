@@ -196,7 +196,7 @@ export default function HabitsScreen() {
 
         <View style={styles.list}>
           {habits.map((habit) => (
-            <HabitCard key={habit.id} habit={habit} />
+            <HabitCard key={habit.id} habit={habit as any} />
           ))}
         </View>
       </ScrollView>
