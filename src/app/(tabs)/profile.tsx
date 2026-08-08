@@ -18,6 +18,7 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { useTodayHabits } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
+import { AppToast } from '@/components/atoms/AppToast';
 import {
   requestNotificationPermissions,
   scheduleHabitReminder,
@@ -94,9 +95,10 @@ export default function ProfileScreen() {
   const [devTapCount, setDevTapCount] = useState(0);
   const [vpsPing, setVpsPing] = useState<'online' | 'offline' | 'checking'>('online');
 
-  // Support Ticket Form State
+  // Support Ticket Form & Custom Toast State
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
+  const [toast, setToast] = useState<{ visible: boolean; title: string; message?: string; type?: 'success' | 'error' | 'info' | 'warning' }>({ visible: false, title: '' });
 
   const isWeb = Platform.OS === 'web';
 
@@ -115,10 +117,10 @@ export default function ProfileScreen() {
       const res = await fetch(`${BACKEND_API_URL}/api/auth/users`).catch(() => null);
       if (res && res.ok) {
         setVpsPing('online');
-        alert('Conexão VPS OK: Servidor Oracle (147.15.72.151) e PostgreSQL 16 operacionais!');
+        setToast({ visible: true, title: 'Servidor Operacional', message: 'Conexão VPS Oracle (147.15.72.151) e PostgreSQL 16 ativas.', type: 'success' });
       } else {
         setVpsPing('offline');
-        alert('Conexão de teste offline.');
+        setToast({ visible: true, title: 'Conexão Offline', message: 'Verifique a rede com a VPS.', type: 'warning' });
       }
     } catch (e) {
       setVpsPing('offline');
@@ -127,7 +129,7 @@ export default function ProfileScreen() {
 
   const handleCreateTicketSubmit = async () => {
     if (!ticketSubject.trim() || !ticketMessage.trim()) {
-      Alert.alert('Atenção', 'Informe o assunto e a mensagem do chamado.');
+      setToast({ visible: true, title: 'Preencha todos os campos', message: 'Informe o assunto e a mensagem do chamado.', type: 'warning' });
       return;
     }
 
@@ -135,9 +137,14 @@ export default function ProfileScreen() {
     if (res.success) {
       setTicketSubject('');
       setTicketMessage('');
-      Alert.alert('Chamado Enviado!', res.message);
+      setToast({
+        visible: true,
+        title: 'Chamado Aberto com Sucesso!',
+        message: 'Seu chamado foi enviado e já pode ser visualizado no Painel Admin.',
+        type: 'success',
+      });
     } else {
-      Alert.alert('Erro', res.message);
+      setToast({ visible: true, title: 'Erro ao Enviar', message: res.message, type: 'error' });
     }
   };
 
@@ -509,6 +516,14 @@ export default function ProfileScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
+
+      <AppToast
+        visible={toast.visible}
+        title={toast.title}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((t) => ({ ...t, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

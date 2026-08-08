@@ -16,6 +16,7 @@ import { useHabitsStore, useHabitsForDate, useTodayCompletion } from '@/stores/u
 import { getUserProfile } from '@/services/storage';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
+import { AppToast } from '@/components/atoms/AppToast';
 import { ProgressRing } from '@/components/molecules/ProgressRing';
 import { HabitCard } from '@/components/molecules/HabitCard';
 import { HabitOptionsModal } from '@/components/molecules/HabitOptionsModal';
@@ -52,9 +53,22 @@ export default function HomeScreen() {
 
   const isWeb = Platform.OS === 'web';
 
+  const [toast, setToast] = useState<{ visible: boolean; title: string; message?: string; type?: 'success' | 'error' | 'info' | 'warning' }>({ visible: false, title: '' });
+
   const loadTickets = async () => {
     const list = await getSupportTickets();
     setTickets(list);
+  };
+
+  const handleStatusChange = async (id: string, newStatus: TicketStatus) => {
+    const list = await updateTicketStatus(id, newStatus);
+    setTickets(list);
+    setToast({
+      visible: true,
+      title: 'Status do Chamado Atualizado',
+      message: `Status alterado para ${newStatus === 'resolved' ? 'Concluído' : newStatus === 'in_progress' ? 'Em Atendimento' : 'Pendente'}.`,
+      type: 'info',
+    });
   };
 
   useFocusEffect(
@@ -357,6 +371,14 @@ export default function HomeScreen() {
 
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        <AppToast
+          visible={toast.visible}
+          title={toast.title}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast((t) => ({ ...t, visible: false }))}
+        />
       </SafeAreaView>
     );
   }
