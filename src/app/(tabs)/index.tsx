@@ -19,14 +19,13 @@ import { AppCard } from '@/components/atoms/AppCard';
 import { ProgressRing } from '@/components/molecules/ProgressRing';
 import { HabitCard } from '@/components/molecules/HabitCard';
 import { HabitOptionsModal } from '@/components/molecules/HabitOptionsModal';
-import { EditTargetModal } from '@/components/molecules/EditTargetModal';
 import { DateStripSelector } from '@/components/molecules/DateStripSelector';
 import { BadgesSection } from '@/components/molecules/BadgesSection';
 import { CreateHabitModal } from '@/components/organisms/CreateHabitModal';
 import { WaterCounterModal } from '@/components/organisms/WaterCounterModal';
 import { ExerciseTimerModal } from '@/components/organisms/ExerciseTimerModal';
 import { GenericHabitCounterModal } from '@/components/organisms/GenericHabitCounterModal';
-import { BACKEND_API_URL } from '@/services/supabase';
+import { getSupportTickets, updateTicketStatus, SupportTicket, TicketStatus } from '@/services/tickets';
 import { Spacing, Palette } from '@/constants/theme';
 import type { HabitWithLogs } from '@/types/habit';
 
@@ -42,6 +41,9 @@ export default function HomeScreen() {
   const [activeExerciseHabit, setActiveExerciseHabit] = useState<HabitWithLogs | null>(null);
   const [activeGenericHabit, setActiveGenericHabit] = useState<HabitWithLogs | null>(null);
 
+  // Support Tickets State
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+
   // Web Admin Feature Flags state
   const [featureAnalytics, setFeatureAnalytics] = useState(true);
   const [featureAIAdvisor, setFeatureAIAdvisor] = useState(true);
@@ -50,6 +52,11 @@ export default function HomeScreen() {
 
   const isWeb = Platform.OS === 'web';
 
+  const loadTickets = async () => {
+    const list = await getSupportTickets();
+    setTickets(list);
+  };
+
   useFocusEffect(
     useCallback(() => {
       getUserProfile().then((profile) => {
@@ -57,6 +64,7 @@ export default function HomeScreen() {
           setUserName(profile.name);
         }
       });
+      loadTickets();
     }, [])
   );
 
@@ -78,13 +86,20 @@ export default function HomeScreen() {
     }
   };
 
+  const handleTicketStatusChange = async (ticketId: string, newStatus: TicketStatus) => {
+    const updated = await updateTicketStatus(ticketId, newStatus);
+    setTickets(updated);
+  };
+
   const cardBg = isDark ? '#172B4D' : '#FFFFFF';
   const borderColor = isDark ? '#253858' : '#DFE1E6';
 
   if (isWeb) {
     // -------------------------------------------------------------
-    // WEB ENTERPRISE ADMIN CRM & SYSTEM CONTROL DASHBOARD
+    // WEB ADMIN DASHBOARD & SUPPORT TICKET CONTROL CENTER
     // -------------------------------------------------------------
+    const openTicketsCount = tickets.filter((t) => t.status === 'open').length;
+
     return (
       <SafeAreaView
         style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
@@ -98,16 +113,42 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.duration(300)} style={styles.webHeader}>
             <View style={{ flex: 1 }}>
               <AppText variant="h2" style={{ fontWeight: '700', fontSize: 20, letterSpacing: -0.3 }}>
-                Dashboard Executive & Controle do Sistema
+                Visão Geral & Central de Suporte
               </AppText>
               <AppText variant="caption" color="textSecondary" style={{ marginTop: 2, fontSize: 13 }}>
-                Painel administrativo de gestão do LifeRoutine Mobile
+                Painel administrativo de controle e atendimento de chamados do LifeRoutine Mobile
               </AppText>
             </View>
+
+            <TouchableOpacity
+              style={[styles.btnPrimary, { backgroundColor: '#0052CC' }]}
+              onPress={loadTickets}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh" size={14} color="#FFF" />
+              <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 4 }}>
+                Atualizar Dados
+              </AppText>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* CRM Metric Cards Grid */}
           <Animated.View entering={FadeInDown.delay(60).duration(300)} style={styles.crmMetricsRow}>
+            <View style={[styles.crmMetricBox, { backgroundColor: cardBg, borderColor }]}>
+              <View style={styles.metricIconRow}>
+                <AppText variant="caption" color="textSecondary" style={styles.metricLabel}>
+                  CHAMADOS ABERTOS
+                </AppText>
+                <Ionicons name="chatbubbles" size={18} color={openTicketsCount > 0 ? '#DE350B' : '#00875A'} />
+              </View>
+              <AppText variant="h2" style={{ fontWeight: '700', fontSize: 24, marginTop: 4, color: openTicketsCount > 0 ? '#DE350B' : colors.text }}>
+                {openTicketsCount} {openTicketsCount === 1 ? 'Chamado' : 'Chamados'}
+              </AppText>
+              <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
+                {openTicketsCount > 0 ? '⚠️ Requer atenção do admin' : '✅ Todos chamados resolvidos'}
+              </AppText>
+            </View>
+
             <View style={[styles.crmMetricBox, { backgroundColor: cardBg, borderColor }]}>
               <View style={styles.metricIconRow}>
                 <AppText variant="caption" color="textSecondary" style={styles.metricLabel}>
@@ -126,22 +167,7 @@ export default function HomeScreen() {
             <View style={[styles.crmMetricBox, { backgroundColor: cardBg, borderColor }]}>
               <View style={styles.metricIconRow}>
                 <AppText variant="caption" color="textSecondary" style={styles.metricLabel}>
-                  ARMAZENAMENTO POSTGRESQL
-                </AppText>
-                <MaterialCommunityIcons name="database-check" size={18} color="#00875A" />
-              </View>
-              <AppText variant="h2" style={{ fontWeight: '700', fontSize: 24, marginTop: 4, color: '#00875A' }}>
-                Ativo (SSL OK)
-              </AppText>
-              <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
-                Docker liferoutine_api:4000
-              </AppText>
-            </View>
-
-            <View style={[styles.crmMetricBox, { backgroundColor: cardBg, borderColor }]}>
-              <View style={styles.metricIconRow}>
-                <AppText variant="caption" color="textSecondary" style={styles.metricLabel}>
-                  RECURSOS HABILITADOS
+                  MÓDULOS ATIVOS
                 </AppText>
                 <Ionicons name="toggle" size={18} color="#6554C0" />
               </View>
@@ -154,17 +180,106 @@ export default function HomeScreen() {
             </View>
           </Animated.View>
 
+          {/* Support Ticket Stream (Chamados de Usuários Mobile) */}
+          <Animated.View entering={FadeInDown.delay(100).duration(300)} style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="ticket-outline" size={18} color="#0052CC" />
+              <AppText variant="h3" style={{ fontSize: 15, fontWeight: '700', marginLeft: 6 }}>
+                Chamados de Suporte Enviados pelos Usuários Mobile ({tickets.length})
+              </AppText>
+            </View>
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 12, marginBottom: 14 }}>
+              Responda ou marque o status dos chamados abertos diretamente pelo app móvel.
+            </AppText>
+
+            <View style={styles.ticketsList}>
+              {tickets.length === 0 ? (
+                <AppText variant="caption" color="textSecondary" align="center" style={{ paddingVertical: 20 }}>
+                  Nenhum chamado pendente no momento.
+                </AppText>
+              ) : (
+                tickets.map((t) => (
+                  <View key={t.id} style={[styles.ticketBox, { borderColor }]}>
+                    <View style={styles.ticketHeader}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <AppText style={{ fontWeight: '700', fontSize: 14 }}>{t.subject}</AppText>
+                          <View
+                            style={[
+                              styles.statusPill,
+                              {
+                                backgroundColor:
+                                  t.status === 'open'
+                                    ? 'rgba(222, 53, 11, 0.15)'
+                                    : t.status === 'in_progress'
+                                    ? 'rgba(255, 171, 0, 0.15)'
+                                    : 'rgba(0, 135, 90, 0.15)',
+                              },
+                            ]}
+                          >
+                            <AppText
+                              style={{
+                                fontSize: 10,
+                                fontWeight: '700',
+                                color:
+                                  t.status === 'open'
+                                    ? '#DE350B'
+                                    : t.status === 'in_progress'
+                                    ? '#FFAB00'
+                                    : '#00875A',
+                              }}
+                            >
+                              {t.status === 'open'
+                                ? '🔴 Pendente'
+                                : t.status === 'in_progress'
+                                ? '🟡 Em Atendimento'
+                                : '🟢 Concluído'}
+                            </AppText>
+                          </View>
+                        </View>
+                        <AppText variant="caption" color="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
+                          Enviado por: {t.userName} ({t.userEmail}) • {new Date(t.createdAt).toLocaleDateString('pt-BR')}
+                        </AppText>
+                      </View>
+
+                      {/* Ticket Action Buttons */}
+                      <View style={styles.ticketActions}>
+                        {t.status !== 'in_progress' && t.status !== 'resolved' && (
+                          <TouchableOpacity
+                            style={[styles.btnActionSmall, { backgroundColor: 'rgba(255, 171, 0, 0.15)', borderColor: '#FFAB00' }]}
+                            onPress={() => handleTicketStatusChange(t.id, 'in_progress')}
+                          >
+                            <AppText style={{ fontSize: 11, fontWeight: '700', color: '#FFAB00' }}>Atender</AppText>
+                          </TouchableOpacity>
+                        )}
+                        {t.status !== 'resolved' && (
+                          <TouchableOpacity
+                            style={[styles.btnActionSmall, { backgroundColor: '#00875A' }]}
+                            onPress={() => handleTicketStatusChange(t.id, 'resolved')}
+                          >
+                            <AppText style={{ fontSize: 11, fontWeight: '700', color: '#FFF' }}>Concluir</AppText>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+
+                    <AppText style={{ fontSize: 12, marginTop: 8, lineHeight: 18, color: colors.text }}>
+                      "{t.message}"
+                    </AppText>
+                  </View>
+                ))
+              )}
+            </View>
+          </Animated.View>
+
           {/* Feature Flags & Habilitação de Recursos */}
-          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.featureFlagsCard, { backgroundColor: cardBg, borderColor }]}>
+          <Animated.View entering={FadeInDown.delay(140).duration(300)} style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
             <View style={styles.sectionTitleRow}>
               <Ionicons name="options-outline" size={18} color="#0052CC" />
               <AppText variant="h3" style={{ fontSize: 15, fontWeight: '700', marginLeft: 6 }}>
                 Gestão de Recursos & Feature Flags (Novas Telas para Usuários)
               </AppText>
             </View>
-            <AppText variant="caption" color="textSecondary" style={{ fontSize: 12, marginBottom: 14 }}>
-              Ative ou desative módulos do aplicativo em tempo real para as contas dos usuários.
-            </AppText>
 
             <View style={styles.flagsGrid}>
               <View style={[styles.flagItem, { borderColor }]}>
@@ -214,54 +329,6 @@ export default function HomeScreen() {
                   trackColor={{ false: borderColor, true: '#0052CC' }}
                 />
               </View>
-
-              <View style={[styles.flagItem, { borderColor }]}>
-                <View style={{ flex: 1 }}>
-                  <AppText style={{ fontWeight: '600', fontSize: 13 }}>
-                    ⏱️ Modais de Timer & Contador de Hábitos
-                  </AppText>
-                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-                    Habilita o cronômetro de exercício e contador de água de 250ml.
-                  </AppText>
-                </View>
-                <Switch
-                  value={featureTimers}
-                  onValueChange={setFeatureTimers}
-                  trackColor={{ false: borderColor, true: '#0052CC' }}
-                />
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* System Audit Log Stream */}
-          <Animated.View entering={FadeInDown.delay(180).duration(300)} style={[styles.auditLogCard, { backgroundColor: cardBg, borderColor }]}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="list-circle-outline" size={18} color="#00875A" />
-              <AppText variant="h3" style={{ fontSize: 15, fontWeight: '700', marginLeft: 6 }}>
-                Logs de Auditoria & Atividade do Servidor
-              </AppText>
-            </View>
-
-            <View style={styles.logList}>
-              {[
-                { time: 'Agora', event: 'Sincronização VPS OK', detail: 'Conexão com PostgreSQL efetuada com sucesso (147.15.72.151)', type: 'success' },
-                { time: 'Há 5m', event: 'Feature Flag Atualizada', detail: 'Recurso de Analytics Avançado marcado como ativo', type: 'info' },
-                { time: 'Há 15m', event: 'Autenticação de Usuário', detail: 'Gabriel Monte realizou login no painel administrativo', type: 'info' },
-                { time: 'Há 1h', event: 'Backup de Tabelas', detail: 'Tabelas users, habits e habit_logs verificadas e integras', type: 'success' },
-              ].map((log, idx) => (
-                <View key={idx} style={[styles.logRow, { borderBottomColor: borderColor }]}>
-                  <View style={[styles.logDot, { backgroundColor: log.type === 'success' ? '#00875A' : '#0052CC' }]} />
-                  <View style={{ flex: 1 }}>
-                    <AppText style={{ fontWeight: '600', fontSize: 13 }}>{log.event}</AppText>
-                    <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-                      {log.detail}
-                    </AppText>
-                  </View>
-                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-                    {log.time}
-                  </AppText>
-                </View>
-              ))}
             </View>
           </Animated.View>
 
@@ -480,41 +547,21 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  scroll: {
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.md,
-  },
-  webScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
+  safe: { flex: 1 },
+  scroll: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md },
+  webScroll: { paddingHorizontal: 20, paddingTop: 16 },
   webHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  webHeaderActions: {
+  btnPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  vpsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 135, 90, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 6,
-  },
-  dotGreen: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#00875A',
   },
   crmMetricsRow: {
     flexDirection: 'row',
@@ -537,7 +584,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  featureFlagsCard: {
+  sectionCard: {
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
@@ -547,6 +594,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  ticketsList: {
+    gap: 10,
+  },
+  ticketBox: {
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  ticketHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  statusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  ticketActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  btnActionSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
   },
   flagsGrid: {
     gap: 10,
@@ -558,26 +633,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6,
     borderWidth: 1,
-  },
-  auditLogCard: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  logList: {
-    marginTop: 10,
-  },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  logDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
   header: {
     flexDirection: 'row',

@@ -39,9 +39,9 @@ function WebSidebarNav() {
 
   const navSections = [
     {
-      title: 'PAINEL DE GESTÃO ERP',
+      title: 'PAINEL DE GESTÃO ADMIN',
       items: [
-        { name: 'index', title: 'Visão Geral ERP', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
+        { name: 'index', title: 'Visão Geral & Suporte', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
         { name: 'users', title: 'Contas & Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
       ],
     },
@@ -89,39 +89,60 @@ function WebSidebarNav() {
           : {},
       ]}
     >
-      {/* Brand Header with Collapse Toggle */}
-      <View style={[styles.sidebarBrand, isCollapsed && styles.sidebarBrandCollapsed]}>
-        <Image
-          source={require('../../../assets/images/icon.png')}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
+      {/* Top Left Header with Mobile Logo + User Profile Badge */}
+      <View style={styles.topHeaderWrapper}>
+        <View style={[styles.sidebarBrand, isCollapsed && styles.sidebarBrandCollapsed]}>
+          <Image
+            source={require('../../../assets/images/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
 
-        {!isCollapsed && (
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, letterSpacing: -0.2 }}>
-                LifeRoutine ERP
+          {!isCollapsed && (
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, letterSpacing: -0.2 }}>
+                  LifeRoutine Admin
+                </AppText>
+              </View>
+              <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+                Painel de Controle
               </AppText>
             </View>
-            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              Gestão Mobile ERP
-            </AppText>
+          )}
+
+          {/* Toggle Collapse Button (< >) */}
+          <TouchableOpacity
+            style={[styles.collapseBtn, { backgroundColor: isDark ? '#172B4D' : '#F4F5F7', borderColor: sidebarBorder }]}
+            onPress={() => setIsCollapsed(!isCollapsed)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isCollapsed ? 'chevron-forward' : 'chevron-back'}
+              size={14}
+              color={isDark ? '#FAFBFC' : '#091E42'}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* User Profile Badge at Top Left */}
+        {!isCollapsed && (
+          <View style={[styles.topProfileBadge, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
+              <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>
+                {userInitials}
+              </AppText>
+            </View>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
+                {userProfile?.name || 'Gabriel Monte'}
+              </AppText>
+              <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+                Super Admin • 30 min max
+              </AppText>
+            </View>
           </View>
         )}
-
-        {/* Toggle Collapse Button (< >) */}
-        <TouchableOpacity
-          style={[styles.collapseBtn, { backgroundColor: isDark ? '#172B4D' : '#F4F5F7', borderColor: sidebarBorder }]}
-          onPress={() => setIsCollapsed(!isCollapsed)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isCollapsed ? 'chevron-forward' : 'chevron-back'}
-            size={14}
-            color={isDark ? '#FAFBFC' : '#091E42'}
-          />
-        </TouchableOpacity>
       </View>
 
       {/* Navigation Groups */}
@@ -182,45 +203,31 @@ function WebSidebarNav() {
         ))}
       </View>
 
-      {/* Footer Profile & Controls (No PostgreSQL text line) */}
+      {/* Clean Footer Controls */}
       <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
         {!isCollapsed ? (
-          <>
-            {/* Dynamic User Profile Card */}
-            <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
-              <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
-                <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>
-                  {userInitials}
-                </AppText>
-              </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
-                  {userProfile?.name || 'Gabriel Monte'}
-                </AppText>
-                <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-                  ⏳ Sessão: 30 min max
-                </AppText>
-              </View>
-              <TouchableOpacity
-                onPress={() => setTheme(isDark ? 'light' : 'dark')}
-                style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
-              >
-                <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.expandedFooterRow}>
+            <TouchableOpacity
+              onPress={() => setTheme(isDark ? 'light' : 'dark')}
+              style={[styles.themeBtnExpanded, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}
+            >
+              <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
+              <AppText variant="caption" style={{ marginLeft: 6, fontSize: 11, color: colors.textSecondary }}>
+                {isDark ? 'Modo Escuro' : 'Modo Claro'}
+              </AppText>
+            </TouchableOpacity>
 
-            {/* Logout Button */}
             <TouchableOpacity
               style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
               onPress={handleLogout}
               activeOpacity={0.7}
             >
               <Ionicons name="log-out-outline" size={16} color="#DE350B" />
-              <AppText style={{ fontSize: 13, fontWeight: '700', color: '#DE350B', marginLeft: 6 }}>
-                Sair do ERP
+              <AppText style={{ fontSize: 12, fontWeight: '700', color: '#DE350B', marginLeft: 4 }}>
+                Sair
               </AppText>
             </TouchableOpacity>
-          </>
+          </View>
         ) : (
           /* Collapsed Compact Footer */
           <View style={styles.collapsedFooterRow}>
@@ -361,10 +368,13 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: 'space-between',
   },
+  topHeaderWrapper: {
+    marginBottom: 16,
+  },
   sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   sidebarBrandCollapsed: {
     justifyContent: 'center',
@@ -380,9 +390,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginLeft: 6,
   },
+  topProfileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  avatarCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   navList: {
     flex: 1,
-    gap: 16,
+    gap: 14,
   },
   navGroup: {
     gap: 2,
@@ -410,24 +434,24 @@ const styles = StyleSheet.create({
   sidebarFooter: {
     paddingTop: 12,
     borderTopWidth: 1,
-    gap: 8,
   },
-  crmProfileCard: {
+  expandedFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  themeBtnExpanded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-  },
-  avatarCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
   },
   themeBtn: {
-    padding: 5,
+    padding: 6,
     borderRadius: 4,
     borderWidth: 1,
   },
@@ -435,8 +459,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 6,
     borderWidth: 1,
   },

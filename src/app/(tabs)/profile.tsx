@@ -7,6 +7,9 @@ import {
   Switch,
   Alert,
   Platform,
+  Modal,
+  TextInput,
+  Pressable,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,10 +20,10 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { useTodayHabits } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
+import { AppButton } from '@/components/atoms/AppButton';
 import {
   requestNotificationPermissions,
   scheduleHabitReminder,
-  scheduleTestNotification,
   cancelAllNotifications,
 } from '@/services/notifications';
 import {
@@ -29,9 +32,8 @@ import {
   DEFAULT_PROFILE,
   type UserProfile,
 } from '@/services/storage';
-import { shareHabitReport, exportDataJSON } from '@/services/export';
-import { SyncManager } from '@/services/sync';
 import { logoutUser } from '@/services/auth';
+import { createSupportTicket } from '@/services/tickets';
 import { BACKEND_API_URL } from '@/services/supabase';
 import { Spacing, Radius } from '@/constants/theme';
 
@@ -91,8 +93,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const todayHabits = useTodayHabits();
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
-  const [devTapCount, setDevTapCount] = useState(0);
   const [vpsPing, setVpsPing] = useState<'online' | 'offline' | 'checking'>('online');
+
+  // Support Ticket Modal state
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [ticketSubject, setTicketSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
 
   const isWeb = Platform.OS === 'web';
 
@@ -118,6 +124,23 @@ export default function ProfileScreen() {
       }
     } catch (e) {
       setVpsPing('offline');
+    }
+  };
+
+  const handleCreateTicketSubmit = async () => {
+    if (!ticketSubject.trim() || !ticketMessage.trim()) {
+      Alert.alert('Atenção', 'Informe o assunto e a mensagem do chamado.');
+      return;
+    }
+
+    const res = await createSupportTicket(ticketSubject, ticketMessage);
+    if (res.success) {
+      setIsTicketModalOpen(false);
+      setTicketSubject('');
+      setTicketMessage('');
+      Alert.alert('Chamado Enviado! 🎫', res.message);
+    } else {
+      Alert.alert('Erro', res.message);
     }
   };
 
@@ -307,6 +330,7 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
+        {/* Preferences */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <AppText variant="label" color="textSecondary" style={styles.sectionLabel}>
             Preferências da Conta
@@ -343,6 +367,24 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
+        {/* Support & Ticket Modal Button */}
+        <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+          <AppText variant="label" color="textSecondary" style={styles.sectionLabel}>
+            Suporte & Atendimento
+          </AppText>
+          <AppCard>
+            <SettingRow
+              icon={<Ionicons name="chatbubbles-outline" size={18} color="#0052CC" />}
+              iconBg="rgba(0, 82, 204, 0.15)"
+              label="Abrir Chamado de Suporte"
+              subtitle="Notificar o painel administrativo sobre dúvidas ou problemas"
+              isLast
+              onPress={() => setIsTicketModalOpen(true)}
+            />
+          </AppCard>
+        </Animated.View>
+
+        {/* Logout Card */}
         <Animated.View entering={FadeInDown.delay(400).duration(400)}>
           <AppCard style={{ marginTop: Spacing.md }}>
             <SettingRow
@@ -370,6 +412,58 @@ export default function ProfileScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
+
+      {/* Support Ticket Modal for Mobile Users */}
+      <Modal
+        visible={isTicketModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setIsTicketModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsTicketModalOpen(false)} />
+          <View style={[styles.ticketModalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.ticketModalHeader}>
+              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Abrir Chamado de Suporte</AppText>
+              <TouchableOpacity onPress={() => setIsTicketModalOpen(false)}>
+                <Ionicons name="close" size={20} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
+              Descreva sua dúvida ou problema para enviar ao nosso painel administrativo:
+            </AppText>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text }]}
+                value={ticketSubject}
+                onChangeText={setTicketSubject}
+                placeholder="Ex: Dúvida sobre lembrete de treino"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
+                value={ticketMessage}
+                onChangeText={setTicketMessage}
+                placeholder="Descreva o que está ocorrendo..."
+                placeholderTextColor={colors.textTertiary}
+                multiline
+              />
+            </View>
+
+            <View style={styles.modalButtonRow}>
+              <AppButton label="Cancelar" variant="ghost" onPress={() => setIsTicketModalOpen(false)} />
+              <AppButton label="Enviar Chamado" variant="primary" onPress={handleCreateTicketSubmit} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -466,4 +560,49 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   rowText: { flex: 1 },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 16,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  ticketModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+  },
+  ticketModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  inputLabel: {
+    marginTop: 8,
+    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  inputBox: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  textInput: {
+    fontSize: 13,
+    paddingVertical: 8,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
 });
