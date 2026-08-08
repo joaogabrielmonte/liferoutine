@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
-import { getUserProfile, UserProfile } from '@/services/storage';
+import { AdminTopBar } from '@/components/organisms/AdminTopBar';
 import { logoutUser } from '@/services/auth';
 import { Shadow } from '@/constants/theme';
 
@@ -16,16 +16,7 @@ function WebSidebarNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-
-  useEffect(() => {
-    getUserProfile().then((profile) => {
-      if (profile) {
-        setUserProfile(profile);
-      }
-    });
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -60,15 +51,6 @@ function WebSidebarNav() {
     },
   ];
 
-  const userInitials = userProfile && userProfile.name
-    ? userProfile.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase()
-    : 'GM';
-
   const sidebarBg = isDark ? '#091E42' : '#FFFFFF';
   const sidebarBorder = isDark ? '#253858' : '#DFE1E6';
   const primaryColor = '#0052CC';
@@ -89,7 +71,7 @@ function WebSidebarNav() {
           : {},
       ]}
     >
-      {/* Top Left Header with Mobile Logo + User Profile Badge */}
+      {/* Sidebar Header with Mobile Logo */}
       <View style={styles.topHeaderWrapper}>
         <View style={[styles.sidebarBrand, isCollapsed && styles.sidebarBrandCollapsed]}>
           <Image
@@ -124,25 +106,6 @@ function WebSidebarNav() {
             />
           </TouchableOpacity>
         </View>
-
-        {/* User Profile Badge at Top Left */}
-        {!isCollapsed && (
-          <View style={[styles.topProfileBadge, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
-            <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
-              <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>
-                {userInitials}
-              </AppText>
-            </View>
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
-                {userProfile?.name || 'Gabriel Monte'}
-              </AppText>
-              <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-                Super Admin • 30 min max
-              </AppText>
-            </View>
-          </View>
-        )}
       </View>
 
       {/* Navigation Groups */}
@@ -203,7 +166,7 @@ function WebSidebarNav() {
         ))}
       </View>
 
-      {/* Clean Footer Controls */}
+      {/* Footer Theme & Logout */}
       <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
         {!isCollapsed ? (
           <View style={styles.expandedFooterRow}>
@@ -229,7 +192,6 @@ function WebSidebarNav() {
             </TouchableOpacity>
           </View>
         ) : (
-          /* Collapsed Compact Footer */
           <View style={styles.collapsedFooterRow}>
             <TouchableOpacity
               onPress={() => setTheme(isDark ? 'light' : 'dark')}
@@ -264,6 +226,7 @@ export default function TabLayout() {
       {isWebLayout && <WebSidebarNav />}
 
       <View style={styles.contentWrapper}>
+        {isWebLayout && <AdminTopBar />}
         <Tabs
           screenOptions={{
             headerShown: false,
@@ -389,20 +352,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     marginLeft: 6,
-  },
-  topProfileBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  avatarCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   navList: {
     flex: 1,
