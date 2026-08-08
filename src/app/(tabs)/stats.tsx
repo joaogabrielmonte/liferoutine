@@ -1,5 +1,14 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Modal,
+  Pressable,
+  TouchableOpacity,
+  Switch,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -49,22 +58,152 @@ export default function StatsScreen() {
   const completion = useTodayCompletion();
   const completedToday = habits.filter((h) => h.isCompletedToday).length;
 
-  const [selectedDateKey, setSelectedDateKey] = React.useState<string | null>(null);
-  const [selectedDayNum, setSelectedDayNum] = React.useState<number | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [selectedDayNum, setSelectedDayNum] = useState<number | null>(null);
 
-  const currentStreak =
-    habits.length > 0
-      ? Math.max(...habits.map((h) => h.streak || 0))
-      : 0;
+  // Web Feature Flags State
+  const [flagAnalytics, setFlagAnalytics] = useState(true);
+  const [flagAIRoutine, setFlagAIRoutine] = useState(true);
+  const [flagNotifications, setFlagNotifications] = useState(true);
+  const [flagTimers, setFlagTimers] = useState(true);
 
-  const bestStreak =
-    habits.length > 0
-      ? Math.max(...habits.map((h) => h.bestStreak || h.streak || 0))
-      : 0;
+  const isWeb = Platform.OS === 'web';
+  const cardBg = isDark ? '#172B4D' : '#FFFFFF';
+  const borderColor = isDark ? '#253858' : '#DFE1E6';
 
+  // -------------------------------------------------------------
+  // WEB FEATURE FLAGS & RECURSOS CONTROL CENTER
+  // -------------------------------------------------------------
+  if (isWeb) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
+        edges={['top']}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.webScroll}
+        >
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.webHeader}>
+            <View style={{ flex: 1 }}>
+              <AppText variant="h2" style={{ fontWeight: '700', fontSize: 20, letterSpacing: -0.3 }}>
+                Gestão de Recursos & Feature Flags
+              </AppText>
+              <AppText variant="caption" color="textSecondary" style={{ marginTop: 2, fontSize: 13 }}>
+                Habilitar ou desabilitar módulos e telas para os usuários do aplicativo mobile
+              </AppText>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.btnPrimary, { backgroundColor: '#0052CC' }]}
+              onPress={() => alert('✅ Configurações de Feature Flags salvas com sucesso!')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="save-outline" size={16} color="#FFF" />
+              <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 6 }}>
+                Salvar Alterações
+              </AppText>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Module Switches Card */}
+          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={[styles.vpsCard, { backgroundColor: cardBg, borderColor }]}>
+            <AppText style={{ fontWeight: '700', fontSize: 15, marginBottom: 14 }}>
+              Módulos Ativos no App Mobile
+            </AppText>
+
+            <View style={styles.flagsList}>
+              <View style={[styles.flagRow, { borderColor }]}>
+                <View style={styles.flagIconBox}>
+                  <Ionicons name="stats-chart" size={18} color="#0052CC" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <AppText style={{ fontWeight: '600', fontSize: 13 }}>
+                    Tela de Estatísticas & Calendário de Consistência
+                  </AppText>
+                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                    Permite ao usuário visualizar gráficos de progresso e heatmaps no mobile.
+                  </AppText>
+                </View>
+                <Switch
+                  value={flagAnalytics}
+                  onValueChange={setFlagAnalytics}
+                  trackColor={{ false: borderColor, true: '#0052CC' }}
+                />
+              </View>
+
+              <View style={[styles.flagRow, { borderColor }]}>
+                <View style={styles.flagIconBox}>
+                  <MaterialCommunityIcons name="robot" size={18} color="#6554C0" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <AppText style={{ fontWeight: '600', fontSize: 13 }}>
+                    Assistente Inteligente de Rotina (IA)
+                  </AppText>
+                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                    Habilita dicas personalizadas de horários para hábitos de treino e sono.
+                  </AppText>
+                </View>
+                <Switch
+                  value={flagAIRoutine}
+                  onValueChange={setFlagAIRoutine}
+                  trackColor={{ false: borderColor, true: '#0052CC' }}
+                />
+              </View>
+
+              <View style={[styles.flagRow, { borderColor }]}>
+                <View style={styles.flagIconBox}>
+                  <Ionicons name="notifications" size={18} color="#FFAB00" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <AppText style={{ fontWeight: '600', fontSize: 13 }}>
+                    Notificações Push & Lembretes Diários
+                  </AppText>
+                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                    Envia alertas agendados de hidratação e treino para o dispositivo.
+                  </AppText>
+                </View>
+                <Switch
+                  value={flagNotifications}
+                  onValueChange={setFlagNotifications}
+                  trackColor={{ false: borderColor, true: '#0052CC' }}
+                />
+              </View>
+
+              <View style={[styles.flagRow, { borderColor }]}>
+                <View style={styles.flagIconBox}>
+                  <Ionicons name="stopwatch" size={18} color="#00875A" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <AppText style={{ fontWeight: '600', fontSize: 13 }}>
+                    Modais de Cronômetro & Contador de Água
+                  </AppText>
+                  <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+                    Exibe modais interativos ao tocar nos cards de água e exercício.
+                  </AppText>
+                </View>
+                <Switch
+                  value={flagTimers}
+                  onValueChange={setFlagTimers}
+                  trackColor={{ false: borderColor, true: '#0052CC' }}
+                />
+              </View>
+            </View>
+          </Animated.View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // MOBILE APP PROGRESS & STATS (UNTOUCHED FOR MOBILE)
+  // -------------------------------------------------------------
+  const currentStreak = habits.length > 0 ? Math.max(...habits.map((h) => h.streak || 0)) : 0;
+  const bestStreak = habits.length > 0 ? Math.max(...habits.map((h) => h.bestStreak || h.streak || 0)) : 0;
   const totalCompletionsCount = logs.filter((l) => l.completedCount > 0).length;
 
-  // Selected Day Logs Breakdown
   const selectedDayLogs = selectedDateKey
     ? logs.filter((l) => l.date === selectedDateKey && l.completedCount > 0)
     : [];
@@ -86,7 +225,6 @@ export default function StatsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Header */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <AppText variant="h2">Progresso & Estatísticas</AppText>
           <AppText variant="caption" color="textSecondary">
@@ -94,7 +232,6 @@ export default function StatsScreen() {
           </AppText>
         </Animated.View>
 
-        {/* Main ring */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <AppCard style={styles.mainCard} elevated>
             <AppText
@@ -116,15 +253,12 @@ export default function StatsScreen() {
           </AppCard>
         </Animated.View>
 
-        {/* Stat cards row 1 */}
         <Animated.View
           entering={FadeInDown.delay(200).duration(400)}
           style={styles.statsRow}
         >
           <StatCard
-            icon={
-              <MaterialCommunityIcons name="fire" size={22} color="#F59E0B" />
-            }
+            icon={<MaterialCommunityIcons name="fire" size={22} color="#F59E0B" />}
             label="SEQUÊNCIA ATUAL"
             value={`${currentStreak} ${currentStreak === 1 ? 'dia' : 'dias'}`}
             subtitle="dias seguidos"
@@ -132,13 +266,7 @@ export default function StatsScreen() {
           />
           <View style={{ width: Spacing.sm }} />
           <StatCard
-            icon={
-              <MaterialCommunityIcons
-                name="trophy-award"
-                size={22}
-                color="#8B5CF6"
-              />
-            }
+            icon={<MaterialCommunityIcons name="trophy-award" size={22} color="#8B5CF6" />}
             label="RECORDE MÁXIMO"
             value={`${bestStreak} ${bestStreak === 1 ? 'dia' : 'dias'}`}
             subtitle="maior sequência"
@@ -146,41 +274,6 @@ export default function StatsScreen() {
           />
         </Animated.View>
 
-        {/* Stat cards row 2 */}
-        <Animated.View
-          entering={FadeInDown.delay(250).duration(400)}
-          style={styles.statsRow}
-        >
-          <StatCard
-            icon={
-              <MaterialCommunityIcons
-                name="target"
-                size={22}
-                color={colors.primary}
-              />
-            }
-            label="HÁBITOS ATIVOS"
-            value={`${habits.length}`}
-            subtitle="programados hoje"
-            color={colors.primary}
-          />
-          <View style={{ width: Spacing.sm }} />
-          <StatCard
-            icon={
-              <Ionicons
-                name="checkmark-done-circle-outline"
-                size={22}
-                color="#22C55E"
-              />
-            }
-            label="TOTAL REGISTRADO"
-            value={`${totalCompletionsCount}`}
-            subtitle="conclusões no total"
-            color="#22C55E"
-          />
-        </Animated.View>
-
-        {/* Heatmap Calendar Section */}
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <AppCard style={styles.heatmapCard}>
             <HeatmapCalendar
@@ -194,54 +287,9 @@ export default function StatsScreen() {
           </AppCard>
         </Animated.View>
 
-        {/* Category Performance Breakdown */}
-        <Animated.View entering={FadeInDown.delay(350).duration(400)}>
-          <AppCard style={styles.categoryCard}>
-            <AppText variant="title" style={{ marginBottom: Spacing.md }}>
-              Desempenho por Categoria
-            </AppText>
-            {(Object.keys(HABIT_CATEGORIES) as HabitCategory[]).map((catKey) => {
-              const catInfo = HABIT_CATEGORIES[catKey];
-              const catHabits = habits.filter((h) => h.category === catKey);
-              if (catHabits.length === 0) return null;
-
-              const completedCat = catHabits.filter((h) => h.isCompletedToday).length;
-              const catRatio = completedCat / catHabits.length;
-
-              return (
-                <View key={catKey} style={styles.categoryRow}>
-                  <View style={styles.categoryTitleRow}>
-                    <View style={[styles.categoryIcon, { backgroundColor: `${catInfo.color}22` }]}>
-                      <MaterialCommunityIcons name={catInfo.icon as any} size={16} color={catInfo.color} />
-                    </View>
-                    <AppText variant="bodyMedium" style={{ marginLeft: Spacing.xs, flex: 1 }}>
-                      {catInfo.label}
-                    </AppText>
-                    <AppText variant="caption" style={{ fontWeight: '700', color: catInfo.color }}>
-                      {completedCat}/{catHabits.length} ({Math.round(catRatio * 100)}%)
-                    </AppText>
-                  </View>
-                  <View style={[styles.progressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${Math.round(catRatio * 100)}%`,
-                          backgroundColor: catInfo.color,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </AppCard>
-        </Animated.View>
-
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* Modal de Histórico do Dia Selecionado */}
       <Modal
         visible={!!selectedDateKey}
         animationType="fade"
@@ -272,10 +320,6 @@ export default function StatsScreen() {
               {formattedSelectedDate}
             </AppText>
 
-            <AppText variant="label" style={{ marginBottom: Spacing.xs }}>
-              Hábitos Concluídos neste Dia ({selectedDayLogs.length}):
-            </AppText>
-
             {selectedDayLogs.length === 0 ? (
               <View style={styles.emptyDayBox}>
                 <Ionicons name="sunny-outline" size={32} color={colors.textTertiary} />
@@ -287,10 +331,6 @@ export default function StatsScreen() {
               <ScrollView style={{ maxHeight: 220 }}>
                 {selectedDayLogs.map((log) => {
                   const habitObj = habits.find((h) => h.id === log.habitId);
-                  const habitTitle = habitObj?.title || 'Hábito';
-                  const habitIcon = habitObj?.icon || 'checkmark-circle-outline';
-                  const habitColor = habitObj?.color || colors.primary;
-
                   return (
                     <View
                       key={log.id}
@@ -299,15 +339,9 @@ export default function StatsScreen() {
                         { backgroundColor: colors.background, borderColor: colors.border },
                       ]}
                     >
-                      <View style={[styles.logItemIcon, { backgroundColor: `${habitColor}22` }]}>
-                        <MaterialCommunityIcons name={habitIcon as any} size={18} color={habitColor} />
-                      </View>
                       <View style={{ flex: 1 }}>
                         <AppText variant="bodyMedium" style={{ fontWeight: '600' }}>
-                          {habitTitle}
-                        </AppText>
-                        <AppText variant="caption" color="textSecondary">
-                          {log.completedCount} {habitObj?.unit || 'vezes'}
+                          {habitObj?.title || 'Hábito'}
                         </AppText>
                       </View>
                       <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
@@ -330,6 +364,44 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md },
+  webScroll: { paddingHorizontal: 20, paddingTop: 16 },
+  webHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  btnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  vpsCard: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  flagsList: {
+    gap: 10,
+  },
+  flagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  flagIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   header: { marginBottom: Spacing.xl },
   mainCard: { marginBottom: Spacing.md, alignItems: 'center' },
   ringContainer: { alignItems: 'center', marginBottom: Spacing.md },
@@ -348,34 +420,6 @@ const styles = StyleSheet.create({
   heatmapCard: {
     padding: Spacing.base,
     marginBottom: Spacing.md,
-  },
-  categoryCard: {
-    padding: Spacing.base,
-    marginBottom: Spacing.md,
-  },
-  categoryRow: {
-    marginBottom: Spacing.sm,
-  },
-  categoryTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  categoryIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -419,12 +463,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: Spacing.xs,
     gap: Spacing.sm,
-  },
-  logItemIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

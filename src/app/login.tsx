@@ -28,12 +28,10 @@ import {
   getRememberedCredentials,
 } from '@/services/auth';
 import { saveUserProfile, DEFAULT_PROFILE } from '@/services/storage';
-import { Radius, Spacing, Shadow } from '@/constants/theme';
 
 export default function LoginScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
-
   const isWeb = Platform.OS === 'web';
 
   // Mode: 'login' | 'signup'
@@ -47,8 +45,12 @@ export default function LoginScreen() {
   // Signup fields
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [wakeTime, setWakeTime] = useState('07:00');
-  const [sleepTime, setSleepTime] = useState('23:00');
+
+  // Inline Validation Error Fallbacks
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   // Password Visibility Toggle ("Olhinho")
   const [showPassword, setShowPassword] = useState(false);
@@ -84,83 +86,85 @@ export default function LoginScreen() {
     checkBiometricsAndSavedCreds();
   }, []);
 
-  const handleBiometricAuth = async () => {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Autenticação Biométrica LifeRoutine',
-        fallbackLabel: 'Usar Senha',
-        cancelLabel: 'Cancelar',
-        disableDeviceFallback: false,
-      });
+  const validateLoginForm = (): boolean => {
+    let valid = true;
+    setEmailError('');
+    setPasswordError('');
 
-      if (result.success) {
-        const creds = await getRememberedCredentials();
-        if (creds && creds.email && creds.password) {
-          const res = await loginUser(creds.email, creds.password);
-          if (res.success && res.user) {
-            await saveUserProfile({
-              ...DEFAULT_PROFILE,
-              name: res.user.name || 'Usuário',
-              wakeTime: res.user.wakeTime || wakeTime,
-              sleepTime: res.user.sleepTime || sleepTime,
-            });
-            router.replace('/(tabs)');
-            return;
-          }
-        }
-        Alert.alert('Sucesso', 'Biometria confirmada! Informe sua senha para o primeiro acesso.');
-      }
-    } catch (error) {
-      Alert.alert('Biometria Indisponível', 'Não foi possível ler a digital.');
+    if (!email || !email.includes('@')) {
+      setEmailError('⚠️ Digite um endereço de e-mail válido (ex: usuario@email.com)');
+      valid = false;
     }
+
+    if (!password || password.length < 4) {
+      setPasswordError('⚠️ A senha deve conter pelo menos 4 caracteres');
+      valid = false;
+    }
+
+    return valid;
   };
 
   const handleLoginSubmit = async () => {
-    if (!email || !password) {
-      Alert.alert('Atenção', 'Informe e-mail e senha.');
-      return;
-    }
+    if (!validateLoginForm()) return;
 
     const res = await loginUser(email, password);
     if (res.success && res.user) {
       await saveRememberedCredentials(email, password, rememberMe);
       await saveUserProfile({
         ...DEFAULT_PROFILE,
-        name: res.user.name || name || 'Gabriel',
-        wakeTime: res.user.wakeTime || wakeTime,
-        sleepTime: res.user.sleepTime || sleepTime,
+        name: res.user.name || name || 'Gabriel Monte',
       });
       router.replace('/(tabs)');
     } else {
-      Alert.alert('Erro ao Fazer Login', res.message);
+      setPasswordError(`⚠️ ${res.message || 'Credenciais inválidas. Verifique e-mail e senha.'}`);
     }
   };
 
-  const handleSignupSubmit = async () => {
-    if (!name || !email || !password) {
-      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios.');
-      return;
+  const validateSignupForm = (): boolean => {
+    let valid = true;
+    setNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+
+    if (!name.trim()) {
+      setNameError('⚠️ Por favor, informe seu nome completo');
+      valid = false;
+    }
+
+    if (!email || !email.includes('@')) {
+      setEmailError('⚠️ Digite um e-mail válido');
+      valid = false;
+    }
+
+    if (!password || password.length < 6) {
+      setPasswordError('⚠️ A senha deve ter no mínimo 6 caracteres por segurança');
+      valid = false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Atenção', 'As senhas digitadas não coincidem.');
-      return;
+      setConfirmPasswordError('⚠️ As senhas não coincidem');
+      valid = false;
     }
 
-    const res = await registerUser(name, email, password, wakeTime, sleepTime);
+    return valid;
+  };
+
+  const handleSignupSubmit = async () => {
+    if (!validateSignupForm()) return;
+
+    const res = await registerUser(name, email, password, '07:00', '23:00');
     if (res.success) {
       await saveRememberedCredentials(email, password, rememberMe);
       await saveUserProfile({
         ...DEFAULT_PROFILE,
         name,
-        wakeTime,
-        sleepTime,
       });
-      Alert.alert('Conta Criada! 🚀', 'Sua conta foi criada com sucesso.', [
-        { text: 'Ir para o Aplicativo', onPress: () => router.replace('/(tabs)') },
+      Alert.alert('Conta Criada! 🚀', 'Sua conta foi cadastrada com sucesso.', [
+        { text: 'Ir para o Painel', onPress: () => router.replace('/(tabs)') },
       ]);
     } else {
-      Alert.alert('Erro no Cadastro', res.message);
+      setEmailError(`⚠️ ${res.message}`);
     }
   };
 
@@ -181,11 +185,11 @@ export default function LoginScreen() {
     }
   };
 
-  // Atlassian / Trello Concise Minimal Palette
-  const webBg = isDark ? '#091E42' : '#FAFBFC';
-  const webCardBg = isDark ? '#172B4D' : '#FFFFFF';
-  const webBorder = isDark ? '#253858' : '#DFE1E6';
-  const atlassianBlue = '#0052CC';
+  // Clean Apple-style UI Palette
+  const webBg = isDark ? '#0F172A' : '#F8FAFC';
+  const webCardBg = isDark ? '#1E293B' : '#FFFFFF';
+  const webBorder = isDark ? '#334155' : '#E2E8F0';
+  const primaryBlue = '#2563EB';
 
   return (
     <SafeAreaView
@@ -201,16 +205,16 @@ export default function LoginScreen() {
           contentContainerStyle={[styles.scroll, isWeb && styles.webScrollContainer]}
         >
           <View style={[styles.mainWrapper, isWeb && styles.webMainWrapper]}>
-            {/* Atlassian / Trello Clean Brand Header */}
+            {/* Apple Style Minimal Header */}
             <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>
-              <View style={[styles.logoBox, { backgroundColor: isWeb ? '#0052CC' : colors.primary }]}>
+              <View style={[styles.logoBox, { backgroundColor: primaryBlue }]}>
                 <MaterialCommunityIcons name="lightning-bolt" size={32} color="#FFFFFF" />
               </View>
               <AppText variant="h1" align="center" style={{ marginTop: 12, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 }}>
                 LifeRoutine
               </AppText>
               <AppText variant="caption" color="textSecondary" align="center" style={{ marginTop: 4, fontSize: 13 }}>
-                Gestão simples de rotinas e acompanhamento diário
+                Painel Administrativo & Gestão Inteligente
               </AppText>
             </Animated.View>
 
@@ -220,8 +224,8 @@ export default function LoginScreen() {
                 style={[
                   styles.tabBtn,
                   {
-                    backgroundColor: activeTab === 'login' ? (isWeb ? atlassianBlue : colors.primary) : (isWeb ? webCardBg : colors.surface),
-                    borderColor: activeTab === 'login' ? (isWeb ? atlassianBlue : colors.primary) : (isWeb ? webBorder : colors.border),
+                    backgroundColor: activeTab === 'login' ? primaryBlue : (isWeb ? webCardBg : colors.surface),
+                    borderColor: activeTab === 'login' ? primaryBlue : (isWeb ? webBorder : colors.border),
                   },
                 ]}
                 onPress={() => setActiveTab('login')}
@@ -247,8 +251,8 @@ export default function LoginScreen() {
                 style={[
                   styles.tabBtn,
                   {
-                    backgroundColor: activeTab === 'signup' ? (isWeb ? atlassianBlue : colors.primary) : (isWeb ? webCardBg : colors.surface),
-                    borderColor: activeTab === 'signup' ? (isWeb ? atlassianBlue : colors.primary) : (isWeb ? webBorder : colors.border),
+                    backgroundColor: activeTab === 'signup' ? primaryBlue : (isWeb ? webCardBg : colors.surface),
+                    borderColor: activeTab === 'signup' ? primaryBlue : (isWeb ? webBorder : colors.border),
                   },
                 ]}
                 onPress={() => setActiveTab('signup')}
@@ -271,66 +275,115 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Animated.View>
 
-            {/* Login Form */}
-            {activeTab === 'login' ? (
-              <Animated.View entering={FadeInDown.delay(120).duration(300)}>
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: isWeb ? webCardBg : colors.surfaceElevated, borderColor: isWeb ? webBorder : colors.border },
-                  ]}
-                >
-                  <AppText variant="title" style={{ marginBottom: 14, fontSize: 16, fontWeight: '700' }}>
-                    Entrar na sua conta
-                  </AppText>
+            {/* Form Container */}
+            <Animated.View entering={FadeInDown.delay(120).duration(300)}>
+              <View
+                style={[
+                  styles.card,
+                  { backgroundColor: isWeb ? webCardBg : colors.surfaceElevated, borderColor: isWeb ? webBorder : colors.border },
+                ]}
+              >
+                <AppText variant="title" style={{ marginBottom: 14, fontSize: 16, fontWeight: '700' }}>
+                  {activeTab === 'login' ? 'Entrar na sua conta' : 'Criar nova conta'}
+                </AppText>
 
-                  {/* Email Field */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    E-MAIL
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="seu.email@exemplo.com"
-                      placeholderTextColor={colors.textTertiary}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  {/* Password Field */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    SENHA
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="Digite sua senha"
-                      placeholderTextColor={colors.textTertiary}
-                      secureTextEntry={!showPassword}
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={18}
-                        color={colors.textSecondary}
+                {activeTab === 'signup' && (
+                  <>
+                    {/* Name */}
+                    <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
+                      NOME COMPLETO
+                    </AppText>
+                    <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: nameError ? '#EF4444' : webBorder }]}>
+                      <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={name}
+                        onChangeText={(t) => { setName(t); setNameError(''); }}
+                        placeholder="Ex: Gabriel Monte"
+                        placeholderTextColor={colors.textTertiary}
                       />
-                    </TouchableOpacity>
-                  </View>
+                    </View>
+                    {!!nameError && <AppText style={styles.errorFallback}>{nameError}</AppText>}
+                  </>
+                )}
 
-                  {/* Save Password Toggle */}
+                {/* Email Field */}
+                <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
+                  E-MAIL
+                </AppText>
+                <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: emailError ? '#EF4444' : webBorder }]}>
+                  <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    value={email}
+                    onChangeText={(t) => { setEmail(t); setEmailError(''); }}
+                    placeholder="seu.email@exemplo.com"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                {!!emailError && <AppText style={styles.errorFallback}>{emailError}</AppText>}
+
+                {/* Password Field */}
+                <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
+                  SENHA
+                </AppText>
+                <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: passwordError ? '#EF4444' : webBorder }]}>
+                  <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
+                  <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    value={password}
+                    onChangeText={(t) => { setPassword(t); setPasswordError(''); }}
+                    placeholder="Digite sua senha"
+                    placeholderTextColor={colors.textTertiary}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={18}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {!!passwordError && <AppText style={styles.errorFallback}>{passwordError}</AppText>}
+
+                {activeTab === 'signup' && (
+                  <>
+                    <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
+                      CONFIRMAR SENHA
+                    </AppText>
+                    <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: confirmPasswordError ? '#EF4444' : webBorder }]}>
+                      <Ionicons name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
+                      <TextInput
+                        style={[styles.input, { color: colors.text }]}
+                        value={confirmPassword}
+                        onChangeText={(t) => { setConfirmPassword(t); setConfirmPasswordError(''); }}
+                        placeholder="Repita a senha"
+                        placeholderTextColor={colors.textTertiary}
+                        secureTextEntry={!showConfirmPassword}
+                      />
+                      <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
+                        <Ionicons
+                          name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={18}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    {!!confirmPasswordError && <AppText style={styles.errorFallback}>{confirmPasswordError}</AppText>}
+                  </>
+                )}
+
+                {/* Save Password Toggle */}
+                {activeTab === 'login' && (
                   <View style={styles.rememberRow}>
                     <View style={styles.rememberLeft}>
                       <Switch
                         value={rememberMe}
                         onValueChange={setRememberMe}
-                        trackColor={{ false: isWeb ? webBorder : colors.border, true: atlassianBlue }}
+                        trackColor={{ false: webBorder, true: primaryBlue }}
                         thumbColor="#FFFFFF"
                       />
                       <AppText variant="caption" color="textSecondary" style={{ marginLeft: 6, fontSize: 12 }}>
@@ -344,145 +397,27 @@ export default function LoginScreen() {
                         setIsResetModalOpen(true);
                       }}
                     >
-                      <AppText variant="caption" style={{ color: isWeb ? '#4C9AFF' : colors.primary, fontWeight: '600', fontSize: 12 }}>
+                      <AppText variant="caption" style={{ color: primaryBlue, fontWeight: '600', fontSize: 12 }}>
                         Esqueceu a senha?
                       </AppText>
                     </TouchableOpacity>
                   </View>
+                )}
 
-                  {/* Biometrics Button */}
-                  {hasBiometrics && !isWeb && (
-                    <TouchableOpacity
-                      style={[
-                        styles.biometricBtn,
-                        { backgroundColor: `${colors.primary}15`, borderColor: colors.primary },
-                      ]}
-                      onPress={handleBiometricAuth}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="finger-print" size={20} color={colors.primary} />
-                      <AppText style={{ color: colors.primary, fontWeight: '600', marginLeft: 8, fontSize: 13 }}>
-                        Entrar com Biometria
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Submit Login */}
-                  <View style={{ marginTop: 16 }}>
-                    <TouchableOpacity
-                      style={[styles.btnSubmit, { backgroundColor: isWeb ? atlassianBlue : colors.primary }]}
-                      onPress={handleLoginSubmit}
-                      activeOpacity={0.8}
-                    >
-                      <AppText style={styles.btnSubmitText}>Entrar na Conta</AppText>
-                    </TouchableOpacity>
-                  </View>
+                {/* Submit Button */}
+                <View style={{ marginTop: 18 }}>
+                  <TouchableOpacity
+                    style={[styles.btnSubmit, { backgroundColor: primaryBlue }]}
+                    onPress={activeTab === 'login' ? handleLoginSubmit : handleSignupSubmit}
+                    activeOpacity={0.8}
+                  >
+                    <AppText style={styles.btnSubmitText}>
+                      {activeTab === 'login' ? 'Entrar na Conta' : 'Concluir Cadastro'}
+                    </AppText>
+                  </TouchableOpacity>
                 </View>
-              </Animated.View>
-            ) : (
-              /* Signup Form */
-              <Animated.View entering={FadeInDown.delay(120).duration(300)}>
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: isWeb ? webCardBg : colors.surfaceElevated, borderColor: isWeb ? webBorder : colors.border },
-                  ]}
-                >
-                  <AppText variant="title" style={{ marginBottom: 14, fontSize: 16, fontWeight: '700' }}>
-                    Criar conta
-                  </AppText>
-
-                  {/* Name */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    NOME COMPLETO *
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Ex: Gabriel Monte"
-                      placeholderTextColor={colors.textTertiary}
-                    />
-                  </View>
-
-                  {/* Email */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    E-MAIL *
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="seu.email@exemplo.com"
-                      placeholderTextColor={colors.textTertiary}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  {/* Password */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    SENHA *
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="Crie uma senha"
-                      placeholderTextColor={colors.textTertiary}
-                      secureTextEntry={!showPassword}
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={18}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Confirm Password */}
-                  <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
-                    CONFIRMAR SENHA *
-                  </AppText>
-                  <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
-                    <TextInput
-                      style={[styles.input, { color: colors.text }]}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      placeholder="Repita a senha"
-                      placeholderTextColor={colors.textTertiary}
-                      secureTextEntry={!showConfirmPassword}
-                    />
-                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
-                      <Ionicons
-                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={18}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Submit Signup */}
-                  <View style={{ marginTop: 16 }}>
-                    <TouchableOpacity
-                      style={[styles.btnSubmit, { backgroundColor: isWeb ? atlassianBlue : colors.primary }]}
-                      onPress={handleSignupSubmit}
-                      activeOpacity={0.8}
-                    >
-                      <AppText style={styles.btnSubmitText}>Cadastrar</AppText>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Animated.View>
-            )}
+              </View>
+            </Animated.View>
 
             {/* Quick Access */}
             <TouchableOpacity
@@ -522,7 +457,7 @@ export default function LoginScreen() {
             <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
               E-MAIL
             </AppText>
-            <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: webBorder }]}>
               <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -538,7 +473,7 @@ export default function LoginScreen() {
             <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
               NOVA SENHA
             </AppText>
-            <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#091E42' : '#FFFFFF') : colors.background, borderColor: isWeb ? webBorder : colors.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: webBorder }]}>
               <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -548,13 +483,6 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.modalButtonRow}>
@@ -602,7 +530,7 @@ const styles = StyleSheet.create({
   tabBtn: {
     flex: 1,
     height: 38,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -610,7 +538,7 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
   },
   fieldLabel: {
@@ -623,8 +551,8 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 40,
-    borderRadius: 6,
+    height: 42,
+    borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
   },
@@ -633,28 +561,26 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 13,
   },
+  errorFallback: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
+    marginLeft: 2,
+  },
   rememberRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 14,
   },
   rememberLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  biometricBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 40,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 12,
-  },
   btnSubmit: {
-    height: 40,
-    borderRadius: 6,
+    height: 42,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -680,7 +606,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     borderWidth: 1,
   },
