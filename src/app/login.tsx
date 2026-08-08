@@ -29,6 +29,8 @@ import {
 } from '@/services/auth';
 import { saveUserProfile, DEFAULT_PROFILE } from '@/services/storage';
 
+type FieldName = 'email' | 'password' | 'name' | 'confirmPassword' | null;
+
 export default function LoginScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -36,6 +38,9 @@ export default function LoginScreen() {
 
   // Mode: 'login' | 'signup'
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+
+  // Active Focused Field for Dynamic Glow Effect
+  const [focusedField, setFocusedField] = useState<FieldName>(null);
 
   // Form Fields
   const [email, setEmail] = useState('');
@@ -185,11 +190,30 @@ export default function LoginScreen() {
     }
   };
 
-  // Clean Apple-style UI Palette
+  // Apple/Vercel Clean UI Palette
   const webBg = isDark ? '#0F172A' : '#F8FAFC';
   const webCardBg = isDark ? '#1E293B' : '#FFFFFF';
   const webBorder = isDark ? '#334155' : '#E2E8F0';
   const primaryBlue = '#2563EB';
+
+  const getInputWrapperStyle = (fieldName: FieldName, hasError: boolean) => {
+    const isFocused = focusedField === fieldName;
+    return [
+      styles.inputWrapper,
+      {
+        backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background,
+        borderColor: hasError
+          ? '#EF4444'
+          : isFocused
+          ? primaryBlue
+          : isWeb
+          ? webBorder
+          : colors.border,
+      },
+      isFocused && !hasError && styles.focusedGlow,
+      hasError && styles.errorGlow,
+    ];
+  };
 
   return (
     <SafeAreaView
@@ -228,7 +252,10 @@ export default function LoginScreen() {
                     borderColor: activeTab === 'login' ? primaryBlue : (isWeb ? webBorder : colors.border),
                   },
                 ]}
-                onPress={() => setActiveTab('login')}
+                onPress={() => {
+                  setActiveTab('login');
+                  setFocusedField(null);
+                }}
               >
                 <Ionicons
                   name="log-in-outline"
@@ -255,7 +282,10 @@ export default function LoginScreen() {
                     borderColor: activeTab === 'signup' ? primaryBlue : (isWeb ? webBorder : colors.border),
                   },
                 ]}
-                onPress={() => setActiveTab('signup')}
+                onPress={() => {
+                  setActiveTab('signup');
+                  setFocusedField(null);
+                }}
               >
                 <Ionicons
                   name="person-add-outline"
@@ -293,14 +323,20 @@ export default function LoginScreen() {
                     <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
                       NOME COMPLETO
                     </AppText>
-                    <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: nameError ? '#EF4444' : webBorder }]}>
-                      <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                    <View style={getInputWrapperStyle('name', !!nameError)}>
+                      <Ionicons
+                        name="person-outline"
+                        size={16}
+                        color={focusedField === 'name' ? primaryBlue : colors.textSecondary}
+                      />
                       <TextInput
                         style={[styles.input, { color: colors.text }]}
                         value={name}
                         onChangeText={(t) => { setName(t); setNameError(''); }}
                         placeholder="Ex: Gabriel Monte"
                         placeholderTextColor={colors.textTertiary}
+                        onFocus={() => setFocusedField('name')}
+                        onBlur={() => setFocusedField(null)}
                       />
                     </View>
                     {!!nameError && <AppText style={styles.errorFallback}>{nameError}</AppText>}
@@ -311,8 +347,12 @@ export default function LoginScreen() {
                 <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
                   E-MAIL
                 </AppText>
-                <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: emailError ? '#EF4444' : webBorder }]}>
-                  <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
+                <View style={getInputWrapperStyle('email', !!emailError)}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={16}
+                    color={focusedField === 'email' ? primaryBlue : colors.textSecondary}
+                  />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={email}
@@ -321,6 +361,8 @@ export default function LoginScreen() {
                     placeholderTextColor={colors.textTertiary}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
                   />
                 </View>
                 {!!emailError && <AppText style={styles.errorFallback}>{emailError}</AppText>}
@@ -329,8 +371,12 @@ export default function LoginScreen() {
                 <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
                   SENHA
                 </AppText>
-                <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: passwordError ? '#EF4444' : webBorder }]}>
-                  <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
+                <View style={getInputWrapperStyle('password', !!passwordError)}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={16}
+                    color={focusedField === 'password' ? primaryBlue : colors.textSecondary}
+                  />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={password}
@@ -338,6 +384,8 @@ export default function LoginScreen() {
                     placeholder="Digite sua senha"
                     placeholderTextColor={colors.textTertiary}
                     secureTextEntry={!showPassword}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
                     <Ionicons
@@ -354,8 +402,12 @@ export default function LoginScreen() {
                     <AppText variant="caption" color="textSecondary" style={styles.fieldLabel}>
                       CONFIRMAR SENHA
                     </AppText>
-                    <View style={[styles.inputWrapper, { backgroundColor: isWeb ? (isDark ? '#0F172A' : '#FFFFFF') : colors.background, borderColor: confirmPasswordError ? '#EF4444' : webBorder }]}>
-                      <Ionicons name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
+                    <View style={getInputWrapperStyle('confirmPassword', !!confirmPasswordError)}>
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={16}
+                        color={focusedField === 'confirmPassword' ? primaryBlue : colors.textSecondary}
+                      />
                       <TextInput
                         style={[styles.input, { color: colors.text }]}
                         value={confirmPassword}
@@ -363,6 +415,8 @@ export default function LoginScreen() {
                         placeholder="Repita a senha"
                         placeholderTextColor={colors.textTertiary}
                         secureTextEntry={!showConfirmPassword}
+                        onFocus={() => setFocusedField('confirmPassword')}
+                        onBlur={() => setFocusedField(null)}
                       />
                       <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
                         <Ionicons
@@ -553,13 +607,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 42,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 12,
+  },
+  focusedGlow: {
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.25)',
+        } as any)
+      : {}),
+  },
+  errorGlow: {
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.25)',
+        } as any)
+      : {}),
   },
   input: {
     flex: 1,
     marginLeft: 6,
     fontSize: 13,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   errorFallback: {
     color: '#EF4444',
