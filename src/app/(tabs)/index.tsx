@@ -12,7 +12,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
-import { useHabitsStore, useHabitsForDate } from '@/stores/useHabitsStore';
+import { useHabitsStore, useHabitsForDate, useTodayCompletion } from '@/stores/useHabitsStore';
 import { getUserProfile } from '@/services/storage';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
