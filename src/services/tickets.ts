@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { getUserProfile } from '@/services/storage';
 import { BACKEND_API_URL } from '@/services/supabase';
 
@@ -39,17 +40,33 @@ const INITIAL_TICKETS: SupportTicket[] = [
 ];
 
 /**
- * Get all support tickets
+ * Get all support tickets persistently
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   try {
-    if (Platform.OS === 'web') {
-      const json = localStorage.getItem(TICKETS_STORAGE_KEY);
-      if (json) {
-        return JSON.parse(json);
+    let json: string | null = null;
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
+    }
+    
+    if (!json && Platform.OS !== 'web') {
+      json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+    }
+
+    if (json) {
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
       }
-      localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(INITIAL_TICKETS));
-      return INITIAL_TICKETS;
+    }
+
+    // Default initial seed
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(INITIAL_TICKETS));
+    }
+    if (Platform.OS !== 'web') {
+      await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, JSON.stringify(INITIAL_TICKETS));
     }
     return INITIAL_TICKETS;
   } catch (error) {
@@ -80,19 +97,24 @@ export async function createSupportTicket(
     };
 
     const updated = [newTicket, ...tickets];
+    const jsonStr = JSON.stringify(updated);
 
-    if (Platform.OS === 'web') {
-      localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(updated));
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
     }
 
-    // Try posting to backend API if available
+    if (Platform.OS !== 'web') {
+      await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+    }
+
+    // Post ticket to backend API if VPS server is connected
     fetch(`${BACKEND_API_URL}/api/tickets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newTicket),
     }).catch(() => {});
 
-    return { success: true, message: '✅ Chamado de suporte aberto com sucesso! Nosso painel foi notificado.' };
+    return { success: true, message: 'Chamado de suporte aberto com sucesso! O painel admin foi notificado.' };
   } catch (error) {
     console.warn('Failed to create ticket:', error);
     return { success: false, message: 'Erro ao abrir chamado de suporte.' };
@@ -109,9 +131,14 @@ export async function updateTicketStatus(
   try {
     const tickets = await getSupportTickets();
     const updated = tickets.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t));
+    const jsonStr = JSON.stringify(updated);
 
-    if (Platform.OS === 'web') {
-      localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(updated));
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+    }
+
+    if (Platform.OS !== 'web') {
+      await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
     }
 
     return updated;
