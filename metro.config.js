@@ -8,7 +8,8 @@ config.server = {
   ...config.server,
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
-      if (req.url && (req.url.includes('.bundle') || req.url.includes('platform=web') || req.url.includes('_expo'))) {
+      // Only intercept for web platform bundle requests to avoid crashing native bundlers
+      if (req.url && req.url.includes('platform=web') && req.url.includes('.bundle')) {
         const chunks = [];
         const originalWrite = res.write;
         const originalEnd = res.end;
@@ -34,7 +35,9 @@ config.server = {
             );
           }
 
-          res.setHeader('Content-Length', Buffer.byteLength(body));
+          if (!res.headersSent) {
+            res.setHeader('Content-Length', Buffer.byteLength(body));
+          }
           originalWrite.call(res, body, 'utf8');
           return originalEnd.call(res, callback);
         };
