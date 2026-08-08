@@ -17,6 +17,7 @@ function WebSidebarNav() {
   const pathname = usePathname();
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
     getUserProfile().then((profile) => {
@@ -73,36 +74,60 @@ function WebSidebarNav() {
   const primaryColor = '#0052CC';
 
   return (
-    <View style={[styles.sidebar, { backgroundColor: sidebarBg, borderColor: sidebarBorder }]}>
-      {/* Brand Header with Official Mobile App Logo */}
-      <View style={styles.sidebarBrand}>
+    <View
+      style={[
+        styles.sidebar,
+        {
+          width: isCollapsed ? 70 : 250,
+          backgroundColor: sidebarBg,
+          borderColor: sidebarBorder,
+        },
+      ]}
+    >
+      {/* Brand Header with Collapse Toggle */}
+      <View style={[styles.sidebarBrand, isCollapsed && styles.sidebarBrandCollapsed]}>
         <Image
           source={require('../../../assets/images/icon.png')}
           style={styles.logoImage}
           resizeMode="contain"
         />
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 15, letterSpacing: -0.2 }}>
-              LifeRoutine ERP
-            </AppText>
-            <View style={[styles.crmPill, { backgroundColor: primaryColor }]}>
-              <AppText style={{ fontSize: 8, fontWeight: '700', color: '#FFFFFF' }}>ERP ADMIN</AppText>
+
+        {!isCollapsed && (
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, letterSpacing: -0.2 }}>
+                LifeRoutine ERP
+              </AppText>
             </View>
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+              Gestão Mobile ERP
+            </AppText>
           </View>
-          <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-            Gestão Mobile • Oracle VPS
-          </AppText>
-        </View>
+        )}
+
+        {/* Toggle Collapse Button (< >) */}
+        <TouchableOpacity
+          style={[styles.collapseBtn, { backgroundColor: isDark ? '#172B4D' : '#F4F5F7', borderColor: sidebarBorder }]}
+          onPress={() => setIsCollapsed(!isCollapsed)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={isCollapsed ? 'chevron-forward' : 'chevron-back'}
+            size={14}
+            color={isDark ? '#FAFBFC' : '#091E42'}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Navigation Groups */}
       <View style={styles.navList}>
         {navSections.map((section) => (
           <View key={section.title} style={styles.navGroup}>
-            <AppText variant="caption" color="textTertiary" style={styles.groupHeader}>
-              {section.title}
-            </AppText>
+            {!isCollapsed && (
+              <AppText variant="caption" color="textTertiary" style={styles.groupHeader}>
+                {section.title}
+              </AppText>
+            )}
 
             {section.items.map((item) => {
               const isSelected =
@@ -115,6 +140,7 @@ function WebSidebarNav() {
                   key={item.name}
                   style={[
                     styles.navItem,
+                    isCollapsed && styles.navItemCollapsed,
                     {
                       backgroundColor: isSelected
                         ? (isDark ? '#172B4D' : '#F4F5F7')
@@ -127,20 +153,23 @@ function WebSidebarNav() {
                 >
                   <Ionicons
                     name={(isSelected ? item.activeIcon : item.icon) as any}
-                    size={16}
+                    size={18}
                     color={isSelected ? primaryColor : (isDark ? '#A5ADBA' : '#6B778C')}
                   />
-                  <AppText
-                    style={{
-                      fontSize: 13,
-                      fontWeight: isSelected ? '700' : '500',
-                      color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
-                      marginLeft: 8,
-                      flex: 1,
-                    }}
-                  >
-                    {item.title}
-                  </AppText>
+
+                  {!isCollapsed && (
+                    <AppText
+                      style={{
+                        fontSize: 13,
+                        fontWeight: isSelected ? '700' : '500',
+                        color: isSelected ? (isDark ? '#FAFBFC' : '#091E42') : (isDark ? '#A5ADBA' : '#6B778C'),
+                        marginLeft: 8,
+                        flex: 1,
+                      }}
+                    >
+                      {item.title}
+                    </AppText>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -148,53 +177,64 @@ function WebSidebarNav() {
         ))}
       </View>
 
-      {/* Footer Profile & Logout Button */}
+      {/* Footer Profile & Controls (No PostgreSQL text line) */}
       <View style={[styles.sidebarFooter, { borderTopColor: sidebarBorder }]}>
-        {/* Dynamic User Profile Card */}
-        <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
-            <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>
-              {userInitials}
-            </AppText>
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
-              {userProfile?.name || 'Gabriel Monte'}
-            </AppText>
-            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              ⏳ Sessão: 30 min max
-            </AppText>
-          </View>
-        </View>
+        {!isCollapsed ? (
+          <>
+            {/* Dynamic User Profile Card */}
+            <View style={[styles.crmProfileCard, { backgroundColor: isDark ? '#172B4D' : '#FAFBFC', borderColor: sidebarBorder }]}>
+              <View style={[styles.avatarCircle, { backgroundColor: primaryColor }]}>
+                <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>
+                  {userInitials}
+                </AppText>
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <AppText variant="caption" style={{ fontWeight: '700', fontSize: 12 }}>
+                  {userProfile?.name || 'Gabriel Monte'}
+                </AppText>
+                <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+                  ⏳ Sessão: 30 min max
+                </AppText>
+              </View>
+              <TouchableOpacity
+                onPress={() => setTheme(isDark ? 'light' : 'dark')}
+                style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
+              >
+                <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
+              </TouchableOpacity>
+            </View>
 
-        {/* Status & Theme Row */}
-        <View style={styles.bottomStatusRow}>
-          <View style={styles.statusIndicator}>
-            <View style={[styles.dotGreen, { backgroundColor: '#00875A' }]} />
-            <AppText style={{ fontSize: 11, fontWeight: '600', color: '#00875A' }}>
-              PostgreSQL Online
-            </AppText>
+            {/* Logout Button */}
+            <TouchableOpacity
+              style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={16} color="#DE350B" />
+              <AppText style={{ fontSize: 13, fontWeight: '700', color: '#DE350B', marginLeft: 6 }}>
+                Sair do ERP
+              </AppText>
+            </TouchableOpacity>
+          </>
+        ) : (
+          /* Collapsed Compact Footer */
+          <View style={styles.collapsedFooterRow}>
+            <TouchableOpacity
+              onPress={() => setTheme(isDark ? 'light' : 'dark')}
+              style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder, marginBottom: 8 }]}
+            >
+              <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={16} color={isDark ? '#A5ADBA' : '#6B778C'} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.logoutBtnCollapsed, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={16} color="#DE350B" />
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeBtn, { backgroundColor: isDark ? '#091E42' : '#F4F5F7', borderColor: sidebarBorder }]}
-          >
-            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A5ADBA' : '#6B778C'} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Botão de Sair do ERP */}
-        <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: isDark ? '#2A1215' : '#FFEBE6', borderColor: '#FFBDAD' }]}
-          onPress={handleLogout}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="log-out-outline" size={16} color="#DE350B" />
-          <AppText style={{ fontSize: 13, fontWeight: '700', color: '#DE350B', marginLeft: 6 }}>
-            Sair do ERP
-          </AppText>
-        </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -311,26 +351,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 250,
     height: '100%',
     borderRightWidth: 1,
-    padding: 16,
+    padding: 12,
     justifyContent: 'space-between',
   },
   sidebarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  sidebarBrandCollapsed: {
+    justifyContent: 'center',
   },
   logoImage: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: 8,
   },
-  crmPill: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
+  collapseBtn: {
+    padding: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    marginLeft: 6,
   },
   navList: {
     flex: 1,
@@ -340,7 +383,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   groupHeader: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,
     marginBottom: 4,
@@ -354,8 +397,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderLeftWidth: 3,
   },
+  navItemCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    borderLeftWidth: 0,
+  },
   sidebarFooter: {
-    paddingTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
     gap: 8,
   },
@@ -373,22 +421,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dotGreen: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
   themeBtn: {
     padding: 5,
     borderRadius: 4,
@@ -402,7 +434,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     borderWidth: 1,
-    marginTop: 4,
+  },
+  logoutBtnCollapsed: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  collapsedFooterRow: {
+    alignItems: 'center',
   },
   contentWrapper: {
     flex: 1,

@@ -110,13 +110,13 @@ export default function UsersScreen() {
     return !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
   });
 
-  const cardBg = isDark ? '#18181B' : '#FFFFFF';
-  const borderColor = isDark ? '#27272A' : '#E4E4E7';
-  const headerBg = isDark ? '#18181B' : '#F4F4F5';
+  const cardBg = isDark ? '#172B4D' : '#FFFFFF';
+  const borderColor = isDark ? '#253858' : '#DFE1E6';
+  const headerBg = isDark ? '#091E42' : '#F4F5F7';
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: isDark ? '#09090B' : '#FAFAFA' }]}
+      style={[styles.safe, { backgroundColor: isDark ? '#091E42' : '#FAFBFC' }]}
       edges={['top']}
     >
       <ScrollView
