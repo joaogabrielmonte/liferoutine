@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -33,11 +34,10 @@ export default function HabitsScreen() {
     if (isWeb) {
       getSupportTickets().then(setTickets);
 
-      if (typeof window !== 'undefined') {
-        const handleSync = () => getSupportTickets().then(setTickets);
-        window.addEventListener('liferoutine_tickets_updated', handleSync);
-        return () => window.removeEventListener('liferoutine_tickets_updated', handleSync);
-      }
+      const subscription = DeviceEventEmitter.addListener('liferoutine_tickets_updated', () => {
+        getSupportTickets().then(setTickets);
+      });
+      return () => subscription.remove();
     }
   }, [isWeb, selectedTable]);
 

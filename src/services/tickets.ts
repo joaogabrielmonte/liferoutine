@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { getUserProfile } from '@/services/storage';
 import { BACKEND_API_URL } from '@/services/supabase';
@@ -84,7 +84,6 @@ export async function createSupportTicket(
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
-        window.dispatchEvent(new Event('liferoutine_tickets_updated'));
       } catch (e) {}
     }
 
@@ -94,6 +93,9 @@ export async function createSupportTicket(
         await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
       } catch (e) {}
     }
+
+    // Broadcast cross-platform event using React Native DeviceEventEmitter
+    DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
     // Post ticket to backend server endpoint
     fetch(`${BACKEND_API_URL}/api/tickets`, {
@@ -133,7 +135,6 @@ export async function updateTicketStatus(
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
-        window.dispatchEvent(new Event('liferoutine_tickets_updated'));
       } catch (e) {}
     }
 
@@ -142,6 +143,9 @@ export async function updateTicketStatus(
         await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
       } catch (e) {}
     }
+
+    // Broadcast cross-platform event using React Native DeviceEventEmitter
+    DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
     return updated;
   } catch (error) {
