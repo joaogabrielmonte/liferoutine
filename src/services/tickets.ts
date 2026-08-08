@@ -15,28 +15,44 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v4';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v5';
 
-// Global memory cache to hold tickets across imports
+// Shared memory store
 let globalTicketsMemory: SupportTicket[] = [];
 
+// Dev API endpoints for real-time mobile to web ticket sync
+const getDevApiUrls = () => [
+  'http://192.168.1.6:8081/api/tickets',
+  'http://localhost:8081/api/tickets',
+  `${BACKEND_API_URL}/api/tickets`,
+];
+
 /**
- * Fetch all support tickets across storage mechanisms
+ * Fetch all support tickets across storage and API endpoints
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
+  // 1. Try fetching from dev API endpoints
+  for (const url of getDevApiUrls()) {
+    try {
+      const res = await fetch(url, { method: 'GET' }).catch(() => null);
+      if (res && res.ok) {
+        const remoteTickets = await res.json();
+        if (Array.isArray(remoteTickets) && remoteTickets.length > 0) {
+          globalTicketsMemory = remoteTickets;
+          return remoteTickets;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Try localStorage / SecureStore fallback
   try {
     let json: string | null = null;
-
-    // 1. Try localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
     }
-
-    // 2. Try SecureStore if native mobile
     if (!json && Platform.OS !== 'web') {
-      try {
-        json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
-      } catch (e) {}
+      json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
     }
 
     if (json) {
@@ -47,7 +63,7 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
       }
     }
   } catch (error) {
-    console.warn('Failed to load tickets:', error);
+    console.warn('Failed to load tickets from local storage:', error);
   }
 
   return globalTicketsMemory;
@@ -94,15 +110,17 @@ export async function createSupportTicket(
       } catch (e) {}
     }
 
-    // Broadcast cross-platform event using React Native DeviceEventEmitter
-    DeviceEventEmitter.emit('liferoutine_tickets_updated');
+    // Send ticket POST request to API endpoints so Web receives it in real-time
+    for (const url of getDevApiUrls()) {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTicket),
+      }).catch(() => {});
+    }
 
-    // Post ticket to backend server endpoint
-    fetch(`${BACKEND_API_URL}/api/tickets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTicket),
-    }).catch(() => {});
+    // Broadcast cross-platform event
+    DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
     return {
       success: true,
@@ -144,7 +162,15 @@ export async function updateTicketStatus(
       } catch (e) {}
     }
 
-    // Broadcast cross-platform event using React Native DeviceEventEmitter
+    // Send status update PUT request to dev API endpoints
+    for (const url of getDevApiUrls()) {
+      fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ticketId, status: newStatus }),
+      }).catch(() => {});
+    }
+
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
     return updated;

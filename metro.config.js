@@ -3,11 +3,69 @@ const { getDefaultConfig } = require('expo/metro-config');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-// Intercept all Metro Web HTTP responses and replace import.meta dynamically before sending to Chrome
+// In-memory support tickets store inside Metro bundler to sync Mobile & Web dev sessions
+let devTickets = [];
+
 config.server = {
   ...config.server,
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
+      // API Route for Support Tickets (/api/tickets)
+      if (req.url && req.url.startsWith('/api/tickets')) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+        if (req.method === 'OPTIONS') {
+          res.statusCode = 200;
+          return res.end();
+        }
+
+        if (req.method === 'GET') {
+          res.statusCode = 200;
+          return res.end(JSON.stringify(devTickets));
+        }
+
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            try {
+              const ticket = JSON.parse(body);
+              devTickets = [ticket, ...devTickets];
+              res.statusCode = 200;
+              return res.end(JSON.stringify({ success: true, tickets: devTickets }));
+            } catch (e) {
+              res.statusCode = 400;
+              return res.end(JSON.stringify({ success: false, error: e.message }));
+            }
+          });
+          return;
+        }
+
+        if (req.method === 'PUT') {
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            try {
+              const { id, status } = JSON.parse(body);
+              devTickets = devTickets.map((t) => (t.id === id ? { ...t, status } : t));
+              res.statusCode = 200;
+              return res.end(JSON.stringify({ success: true, tickets: devTickets }));
+            } catch (e) {
+              res.statusCode = 400;
+              return res.end(JSON.stringify({ success: false, error: e.message }));
+            }
+          });
+          return;
+        }
+      }
+
       // Only intercept for web platform bundle requests to avoid crashing native bundlers
       if (req.url && req.url.includes('platform=web') && req.url.includes('.bundle')) {
         const chunks = [];
