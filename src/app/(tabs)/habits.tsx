@@ -14,7 +14,7 @@ import { useHabitsStore } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { HabitCard } from '@/components/molecules/HabitCard';
 import { CreateHabitModal } from '@/components/organisms/CreateHabitModal';
-import { getSupportTickets, type SupportTicket } from '@/services/tickets';
+import { getSupportTickets, createSupportTicket, type SupportTicket } from '@/services/tickets';
 
 type TableName = 'support_tickets' | 'users' | 'habits' | 'habit_logs';
 
@@ -61,15 +61,35 @@ export default function HabitsScreen() {
                 Inspeção de tabelas, esquemas e registros em tempo real no banco do servidor Oracle VPS
               </AppText>
             </View>
-            <TouchableOpacity
-              style={[styles.btnRefresh, { backgroundColor: '#0052CC' }]}
-              onPress={() => getSupportTickets().then(setTickets)}
-            >
-              <Ionicons name="refresh" size={14} color="#FFF" />
-              <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 4 }}>
-                Recarregar Dados
-              </AppText>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.btnRefresh, { backgroundColor: '#00875A' }]}
+                onPress={async () => {
+                  const res = await createSupportTicket(
+                    'Teste de Chamado via Database Explorer',
+                    'Este chamado de teste foi inserido via Web Admin para verificar a sincronização do banco.',
+                    'Gabriel Monte',
+                    'gabriel@liferoutine.com'
+                  );
+                  setTickets(res.tickets);
+                }}
+              >
+                <Ionicons name="add-circle" size={14} color="#FFF" />
+                <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 4 }}>
+                  Injetar Chamado no Banco
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.btnRefresh, { backgroundColor: '#0052CC' }]}
+                onPress={() => getSupportTickets().then(setTickets)}
+              >
+                <Ionicons name="refresh" size={14} color="#FFF" />
+                <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 4 }}>
+                  Recarregar Dados
+                </AppText>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
 
           {/* Table Selector Tabs */}

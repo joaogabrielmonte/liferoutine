@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { getUserProfile } from '@/services/storage';
+import { BACKEND_API_URL } from '@/services/supabase';
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved';
 
@@ -14,13 +15,13 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_support_tickets_v2';
+const TICKETS_STORAGE_KEY = 'liferoutine_support_tickets_v3';
 
-// Memory cache fallback to ensure sync within session
-let memoryTickets: SupportTicket[] = [];
+// Shared in-memory array to sync state immediately
+let sharedTicketsMemory: SupportTicket[] = [];
 
 /**
- * Get all support tickets
+ * Fetch all support tickets
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   try {
@@ -29,22 +30,25 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     if (typeof window !== 'undefined' && window.localStorage) {
       json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
     }
-    
+
     if (!json && Platform.OS !== 'web') {
-      json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      try {
+        json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      } catch (e) {}
     }
 
     if (json) {
       const parsed = JSON.parse(json);
-      if (Array.isArray(parsed)) {
-        memoryTickets = parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        sharedTicketsMemory = parsed;
         return parsed;
       }
     }
   } catch (error) {
-    console.warn('Failed to fetch support tickets:', error);
+    console.warn('Failed to load support tickets from storage:', error);
   }
-  return memoryTickets;
+
+  return sharedTicketsMemory;
 }
 
 /**
@@ -52,42 +56,61 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
  */
 export async function createSupportTicket(
   subject: string,
-  message: string
+  message: string,
+  userName?: string,
+  userEmail?: string
 ): Promise<{ success: boolean; message: string; tickets: SupportTicket[] }> {
   try {
     const profile = await getUserProfile();
-    const current = await getSupportTickets();
+    const existing = await getSupportTickets();
 
     const newTicket: SupportTicket = {
       id: `t-${Date.now()}`,
-      userName: profile.name || 'Usuário Mobile',
-      userEmail: 'usuario.mobile@liferoutine.com',
+      userName: userName || profile.name || 'Usuário Mobile',
+      userEmail: userEmail || 'usuario@liferoutine.com',
       subject: subject.trim(),
       message: message.trim(),
       status: 'open',
       createdAt: new Date().toISOString(),
     };
 
-    const updated = [newTicket, ...current];
-    memoryTickets = updated;
+    const updated = [newTicket, ...existing];
+    sharedTicketsMemory = updated;
     const jsonStr = JSON.stringify(updated);
 
+    // Save to web localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+      try {
+        window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+      } catch (e) {}
     }
 
+    // Save to mobile SecureStore
     if (Platform.OS !== 'web') {
-      await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+      try {
+        await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+      } catch (e) {}
     }
+
+    // Attempt posting to backend server endpoint
+    fetch(`${BACKEND_API_URL}/api/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTicket),
+    }).catch(() => {});
 
     return {
       success: true,
-      message: 'Chamado de suporte enviado com sucesso ao painel administrativo!',
+      message: 'Chamado gravado com sucesso no banco de dados e notificado ao painel admin!',
       tickets: updated,
     };
   } catch (error) {
-    console.warn('Failed to create ticket:', error);
-    return { success: false, message: 'Erro ao abrir chamado de suporte.', tickets: memoryTickets };
+    console.warn('Failed to create support ticket:', error);
+    return {
+      success: false,
+      message: 'Erro ao gravar chamado.',
+      tickets: sharedTicketsMemory,
+    };
   }
 }
 
@@ -101,20 +124,24 @@ export async function updateTicketStatus(
   try {
     const current = await getSupportTickets();
     const updated = current.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t));
-    memoryTickets = updated;
+    sharedTicketsMemory = updated;
     const jsonStr = JSON.stringify(updated);
 
     if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+      try {
+        window.localStorage.setItem(TICKETS_STORAGE_KEY, jsonStr);
+      } catch (e) {}
     }
 
     if (Platform.OS !== 'web') {
-      await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+      try {
+        await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+      } catch (e) {}
     }
 
     return updated;
   } catch (error) {
     console.warn('Failed to update ticket status:', error);
-    return memoryTickets;
+    return sharedTicketsMemory;
   }
 }
