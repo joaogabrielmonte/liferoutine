@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { AppText } from '@/components/atoms/AppText';
@@ -14,130 +14,89 @@ function WebSidebarNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const navSections = [
-    {
-      title: 'GERENCIAMENTO DE CONTEÚDO',
-      items: [
-        { name: 'users', title: 'Usuários & Níveis de Acesso', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
-        { name: 'habits', title: 'Hábitos Globais', icon: 'checkbox-outline', activeIcon: 'checkbox', path: '/(tabs)/habits' },
-      ],
-    },
-    {
-      title: 'ANALYTICS & EXECUTIVE',
-      items: [
-        { name: 'index', title: 'Visão Geral & Dashboard', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
-        { name: 'stats', title: 'Analytics & Relatórios', icon: 'stats-chart-outline', activeIcon: 'stats-chart', path: '/(tabs)/stats' },
-      ],
-    },
-    {
-      title: 'INFRAESTRUTURA',
-      items: [
-        { name: 'profile', title: 'Configurações do Servidor', icon: 'server-outline', activeIcon: 'server', path: '/(tabs)/profile' },
-      ],
-    },
+  const navItems = [
+    { name: 'index', title: 'Visão Geral', icon: 'grid-outline', activeIcon: 'grid', path: '/(tabs)' },
+    { name: 'users', title: 'Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
+    { name: 'habits', title: 'Hábitos', icon: 'checkbox-outline', activeIcon: 'checkbox', path: '/(tabs)/habits' },
+    { name: 'stats', title: 'Relatórios', icon: 'stats-chart-outline', activeIcon: 'stats-chart', path: '/(tabs)/stats' },
+    { name: 'profile', title: 'Configurações', icon: 'settings-outline', activeIcon: 'settings', path: '/(tabs)/profile' },
   ];
 
   return (
-    <View style={[styles.sidebar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-      {/* Enterprise Brand Header */}
-      <View style={styles.sidebarBrand}>
-        <View style={[styles.logoSquare, { backgroundColor: colors.primary }]}>
-          <MaterialCommunityIcons name="lightning-bolt" size={22} color="#FFFFFF" />
+    <View style={[styles.sidebar, { backgroundColor: isDark ? '#09090B' : '#FFFFFF', borderColor: isDark ? '#27272A' : '#E4E4E7' }]}>
+      {/* Vercel-style Minimalist Brand Header */}
+      <View style={styles.sidebarHeader}>
+        <View style={[styles.logoDot, { backgroundColor: isDark ? '#FAFAFA' : '#09090B' }]}>
+          <Ionicons name="flash" size={14} color={isDark ? '#09090B' : '#FAFAFA'} />
         </View>
-        <View style={{ flex: 1, marginLeft: Spacing.xs }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <AppText variant="subtitle" style={{ fontWeight: '800', fontSize: 15, letterSpacing: 0.3 }}>
-              LifeRoutine
-            </AppText>
-            <View style={styles.enterprisePill}>
-              <AppText style={{ fontSize: 9, fontWeight: '800', color: '#FFFFFF' }}>ENTERPRISE</AppText>
-            </View>
-          </View>
-          <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
-            Painel Administrativo
+        <AppText variant="subtitle" style={{ fontWeight: '700', fontSize: 14, marginLeft: 8, letterSpacing: -0.2 }}>
+          LifeRoutine
+        </AppText>
+        <View style={[styles.adminBadge, { backgroundColor: isDark ? '#27272A' : '#F4F4F5' }]}>
+          <AppText style={{ fontSize: 10, fontWeight: '600', color: isDark ? '#A1A1AA' : '#71717A' }}>
+            Admin
           </AppText>
         </View>
       </View>
 
-      {/* Navigation Groups */}
+      {/* Nav List */}
       <View style={styles.navList}>
-        {navSections.map((section) => (
-          <View key={section.title} style={styles.navGroup}>
-            <AppText variant="caption" color="textTertiary" style={styles.groupHeader}>
-              {section.title}
-            </AppText>
+        {navItems.map((item) => {
+          const isSelected =
+            item.name === 'index'
+              ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
+              : pathname.includes(item.name);
 
-            {section.items.map((item) => {
-              const isSelected =
-                item.name === 'index'
-                  ? pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/'
-                  : pathname.includes(item.name);
-
-              return (
-                <TouchableOpacity
-                  key={item.name}
-                  style={[
-                    styles.navItem,
-                    {
-                      backgroundColor: isSelected ? (isDark ? '#1E293B' : '#E2E8F0') : 'transparent',
-                      borderColor: isSelected ? colors.primary : 'transparent',
-                    },
-                  ]}
-                  onPress={() => router.push(item.path as any)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={(isSelected ? item.activeIcon : item.icon) as any}
-                    size={17}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
-                  <AppText
-                    style={{
-                      fontSize: 13,
-                      fontWeight: isSelected ? '700' : '600',
-                      color: isSelected ? colors.text : colors.textSecondary,
-                      marginLeft: Spacing.xs,
-                      flex: 1,
-                    }}
-                  >
-                    {item.title}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+          return (
+            <TouchableOpacity
+              key={item.name}
+              style={[
+                styles.navItem,
+                {
+                  backgroundColor: isSelected
+                    ? isDark ? '#27272A' : '#F4F4F5'
+                    : 'transparent',
+                },
+              ]}
+              onPress={() => router.push(item.path as any)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={(isSelected ? item.activeIcon : item.icon) as any}
+                size={16}
+                color={isSelected ? (isDark ? '#FAFAFA' : '#09090B') : (isDark ? '#A1A1AA' : '#71717A')}
+              />
+              <AppText
+                style={{
+                  fontSize: 13,
+                  fontWeight: isSelected ? '600' : '500',
+                  color: isSelected ? (isDark ? '#FAFAFA' : '#09090B') : (isDark ? '#A1A1AA' : '#71717A'),
+                  marginLeft: 10,
+                  flex: 1,
+                }}
+              >
+                {item.title}
+              </AppText>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Footer Profile & Server Status */}
-      <View style={[styles.sidebarFooter, { borderTopColor: colors.border }]}>
-        <View style={[styles.corpProfileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: '#2563EB' }]}>
-            <AppText style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>GM</AppText>
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <AppText variant="caption" style={{ fontWeight: '800', fontSize: 12 }}>
-              Gabriel Monte
-            </AppText>
-            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
-              Super Administrator
-            </AppText>
-          </View>
-        </View>
-
-        <View style={styles.bottomStatusRow}>
-          <View style={styles.statusIndicator}>
+      {/* Footer Status */}
+      <View style={[styles.sidebarFooter, { borderTopColor: isDark ? '#27272A' : '#E4E4E7' }]}>
+        <View style={styles.footerRow}>
+          <View style={styles.statusGroup}>
             <View style={styles.dotGreen} />
-            <AppText style={{ fontSize: 11, fontWeight: '700', color: '#059669' }}>
-              Oracle VPS Online
+            <AppText style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#A1A1AA' : '#71717A' }}>
+              VPS Online
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+            style={[styles.themeBtn, { backgroundColor: isDark ? '#18181B' : '#F4F4F5', borderColor: isDark ? '#27272A' : '#E4E4E7' }]}
           >
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={14} color={colors.text} />
+            <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={14} color={isDark ? '#A1A1AA' : '#71717A'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -146,14 +105,14 @@ function WebSidebarNav() {
 }
 
 export default function TabLayout() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const isWebLayout = Platform.OS === 'web' || width >= 768;
 
   return (
-    <View style={[styles.rootWrapper, { backgroundColor: colors.background }]}>
+    <View style={[styles.rootWrapper, { backgroundColor: isDark ? '#09090B' : '#FAFAFA' }]}>
       {isWebLayout && <WebSidebarNav />}
 
       <View style={styles.contentWrapper}>
@@ -256,92 +215,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 260,
+    width: 230,
     height: '100%',
     borderRightWidth: 1,
-    padding: Spacing.md,
+    padding: 16,
     justifyContent: 'space-between',
   },
-  sidebarBrand: {
+  sidebarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: 24,
+    paddingHorizontal: 4,
   },
-  logoSquare: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
+  logoDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  enterprisePill: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
+  adminBadge: {
+    marginLeft: 'auto',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   navList: {
     flex: 1,
-    gap: Spacing.md,
-  },
-  navGroup: {
-    gap: 3,
-  },
-  groupHeader: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-    paddingLeft: 6,
+    gap: 2,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 9,
-    borderRadius: Radius.md,
-    borderLeftWidth: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
   sidebarFooter: {
-    paddingTop: Spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.xs,
+    paddingTop: 14,
+    borderTopWidth: 1,
   },
-  corpProfileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-  },
-  avatarCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomStatusRow: {
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-    marginTop: 4,
   },
-  statusIndicator: {
+  statusGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   dotGreen: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#059669',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22C55E',
   },
   themeBtn: {
     padding: 5,
-    borderRadius: Radius.sm,
+    borderRadius: 6,
     borderWidth: 1,
   },
   contentWrapper: {
