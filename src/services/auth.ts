@@ -24,12 +24,56 @@ export type SavedCredentials = {
 };
 
 /**
- * Get stored registered user accounts from local SecureStore
+ * Helper to store item across Native (SecureStore) and Web (localStorage)
+ */
+async function setSessionItem(key: string, value: string): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  } catch (e) {
+    console.warn(`Failed to set session item [${key}]:`, e);
+  }
+}
+
+/**
+ * Helper to read item across Native (SecureStore) and Web (localStorage)
+ */
+async function getSessionItem(key: string): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Helper to delete item across Native (SecureStore) and Web (localStorage)
+ */
+async function removeSessionItem(key: string): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  } catch (e) {
+    console.warn(`Failed to delete session item [${key}]:`, e);
+  }
+}
+
+/**
+ * Get stored registered user accounts from local storage
  */
 async function getUsersDB(): Promise<UserAccount[]> {
   try {
-    if (Platform.OS === 'web') return [];
-    const json = await SecureStore.getItemAsync(USER_DB_KEY);
+    const json = await getSessionItem(USER_DB_KEY);
     return json ? JSON.parse(json) : [];
   } catch (error) {
     console.warn('Failed to read users DB:', error);
@@ -42,8 +86,7 @@ async function getUsersDB(): Promise<UserAccount[]> {
  */
 async function saveUsersDB(users: UserAccount[]): Promise<void> {
   try {
-    if (Platform.OS === 'web') return;
-    await SecureStore.setItemAsync(USER_DB_KEY, JSON.stringify(users));
+    await setSessionItem(USER_DB_KEY, JSON.stringify(users));
   } catch (error) {
     console.warn('Failed to save users DB:', error);
   }
@@ -62,21 +105,20 @@ async function syncLocalAccountAndProfile(user: UserAccount): Promise<void> {
       users.push(user);
     }
     await saveUsersDB(users);
-
-    const currentProfile = await getUserProfile();
     await saveUserProfile({
-      ...currentProfile,
-      name: user.name || 'Usuário',
-      wakeTime: user.wakeTime || '07:00',
-      sleepTime: user.sleepTime || '23:00',
+      name: user.name,
+      wakeTime: user.wakeTime,
+      sleepTime: user.sleepTime,
+      notificationsEnabled: true,
+      darkMode: true,
     });
-  } catch (err) {
-    console.warn('[Auth] Failed to sync local account & profile:', err);
+  } catch (error) {
+    console.warn('Failed to sync local account and profile:', error);
   }
 }
 
 /**
- * Save or clear remembered login credentials
+ * Save remembered login credentials
  */
 export async function saveRememberedCredentials(
   email: string,
@@ -84,12 +126,11 @@ export async function saveRememberedCredentials(
   rememberMe: boolean
 ): Promise<void> {
   try {
-    if (Platform.OS === 'web') return;
     if (rememberMe) {
-      const creds: SavedCredentials = { email, password, rememberMe: true };
-      await SecureStore.setItemAsync(SAVED_CREDENTIALS_KEY, JSON.stringify(creds));
+      const data: SavedCredentials = { email, password, rememberMe };
+      await setSessionItem(SAVED_CREDENTIALS_KEY, JSON.stringify(data));
     } else {
-      await SecureStore.deleteItemAsync(SAVED_CREDENTIALS_KEY);
+      await removeSessionItem(SAVED_CREDENTIALS_KEY);
     }
   } catch (error) {
     console.warn('Failed to save remembered credentials:', error);
@@ -101,16 +142,16 @@ export async function saveRememberedCredentials(
  */
 export async function getRememberedCredentials(): Promise<SavedCredentials | null> {
   try {
-    if (Platform.OS === 'web') return null;
-    const json = await SecureStore.getItemAsync(SAVED_CREDENTIALS_KEY);
-    return json ? JSON.parse(json) : null;
+    const json = await getSessionItem(SAVED_CREDENTIALS_KEY);
+    if (!json) return null;
+    return JSON.parse(json);
   } catch (error) {
     return null;
   }
 }
 
 /**
- * Register a new user account (Oracle VPS PostgreSQL only — SQLite fallback DISABLED)
+ * Register new user (Oracle VPS PostgreSQL primary, local fallback)
  */
 export async function registerUser(
   name: string,
@@ -120,14 +161,9 @@ export async function registerUser(
   sleepTime: string = '23:00'
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name.trim() || 'Usuário';
 
-    if (!cleanEmail || !password || password.length < 4) {
-      return { success: false, message: 'Preencha um e-mail válido e senha com pelo menos 4 caracteres.' };
-    }
-
-    // Register ONLY on remote Oracle VPS PostgreSQL — no SQLite fallback
     let response: Response;
     try {
       response = await fetch(`${BACKEND_API_URL}/api/auth/register`, {
@@ -143,7 +179,7 @@ export async function registerUser(
       });
     } catch (netError) {
       console.warn('[Auth] Sem conexão com o servidor VPS:', netError);
-      return { success: false, message: '❌ Sem conexão com o servidor. Verifique sua internet e tente novamente.' };
+      return { success: false, message: 'Sem conexão com o servidor VPS. Tente novamente.' };
     }
 
     if (!response.ok) {
@@ -157,7 +193,6 @@ export async function registerUser(
       return { success: false, message: data.error || 'Erro ao cadastrar usuário.' };
     }
 
-    // Save session locally after successful VPS registration
     const newUserAccount: UserAccount = {
       name: cleanName,
       email: cleanEmail,
@@ -168,10 +203,8 @@ export async function registerUser(
     };
     await syncLocalAccountAndProfile(newUserAccount);
 
-    if (Platform.OS !== 'web') {
-      await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
-      await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
-    }
+    await setSessionItem(SESSION_KEY, cleanEmail);
+    await setSessionItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
 
     return { success: true, message: '✅ Cadastro realizado com sucesso no servidor!' };
   } catch (error) {
@@ -181,7 +214,7 @@ export async function registerUser(
 }
 
 /**
- * Login user (Oracle VPS PostgreSQL only — SQLite fallback DISABLED)
+ * Login user (Oracle VPS PostgreSQL)
  */
 export async function loginUser(
   email: string,
@@ -190,7 +223,6 @@ export async function loginUser(
   try {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Login ONLY against remote VPS — no SQLite fallback
     let response: Response;
     try {
       response = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
@@ -217,16 +249,14 @@ export async function loginUser(
 
         await syncLocalAccountAndProfile(userAccount);
 
-        if (Platform.OS !== 'web') {
-          await SecureStore.setItemAsync(SESSION_KEY, cleanEmail);
-          await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
-        }
+        // Store session persisted across Web (localStorage) and Native (SecureStore)
+        await setSessionItem(SESSION_KEY, cleanEmail);
+        await setSessionItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
 
         return { success: true, message: '✅ Login efetuado com sucesso!', user: userAccount };
       }
     }
 
-    // Server responded with error status (e.g. 401 Incorrect password, 400 Bad request)
     const errorData = await response.json().catch(() => ({}));
     return { success: false, message: errorData.error || 'E-mail ou senha incorretos.' };
   } catch (error) {
@@ -260,13 +290,12 @@ export async function resetUserPassword(
 }
 
 /**
- * Get active session user with 30-minute expiration check
+ * Get active session user with 30-minute expiration check (Persisted across Web & Native)
  */
 export async function getActiveSessionUser(): Promise<UserAccount | null> {
   try {
-    if (Platform.OS === 'web') return null;
-    const email = await SecureStore.getItemAsync(SESSION_KEY);
-    const timestampStr = await SecureStore.getItemAsync(SESSION_TIMESTAMP_KEY);
+    const email = await getSessionItem(SESSION_KEY);
+    const timestampStr = await getSessionItem(SESSION_TIMESTAMP_KEY);
 
     if (!email || !timestampStr) return null;
 
@@ -282,7 +311,7 @@ export async function getActiveSessionUser(): Promise<UserAccount | null> {
     }
 
     // Refresh activity timestamp
-    await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, now.toString());
+    await setSessionItem(SESSION_TIMESTAMP_KEY, now.toString());
 
     const users = await getUsersDB();
     const foundUser = users.find((u) => u.email === email);
@@ -292,7 +321,7 @@ export async function getActiveSessionUser(): Promise<UserAccount | null> {
 
     const currentProfile = await getUserProfile();
     return {
-      name: currentProfile.name || 'Usuário',
+      name: currentProfile.name || 'Gabriel Monte',
       email,
       passwordHash: '',
       wakeTime: currentProfile.wakeTime || '07:00',
@@ -305,15 +334,13 @@ export async function getActiveSessionUser(): Promise<UserAccount | null> {
 }
 
 /**
- * Logout
+ * Explicit Logout (Clears session on Web & Native)
  */
 export async function logoutUser(): Promise<void> {
   try {
-    if (Platform.OS !== 'web') {
-      await SecureStore.deleteItemAsync(SESSION_KEY);
-      await SecureStore.deleteItemAsync(SESSION_TIMESTAMP_KEY);
-      await SecureStore.deleteItemAsync('liferoutine_user_profile');
-    }
+    await removeSessionItem(SESSION_KEY);
+    await removeSessionItem(SESSION_TIMESTAMP_KEY);
+    await removeSessionItem('liferoutine_user_profile');
   } catch (error) {
     console.warn('Logout error:', error);
   }

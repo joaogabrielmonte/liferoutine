@@ -296,15 +296,6 @@ export default function LoginScreen() {
               </View>
             </Animated.View>
 
-            {/* Direct Access */}
-            <TouchableOpacity
-              style={styles.skipBtn}
-              onPress={() => router.replace('/(tabs)')}
-            >
-              <AppText variant="caption" color="textSecondary" align="center" style={{ fontSize: 12 }}>
-                Continuar sem login →
-              </AppText>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
