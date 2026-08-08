@@ -101,17 +101,8 @@ export default function HomeScreen() {
                 Dashboard Executive & Controle do Sistema
               </AppText>
               <AppText variant="caption" color="textSecondary" style={{ marginTop: 2, fontSize: 13 }}>
-                Painel administrativo do servidor Oracle VPS PostgreSQL (kingslityc.com.br)
+                Painel administrativo de gestão do LifeRoutine Mobile
               </AppText>
-            </View>
-
-            <View style={styles.webHeaderActions}>
-              <View style={styles.vpsBadge}>
-                <View style={styles.dotGreen} />
-                <AppText style={{ fontSize: 12, fontWeight: '600', color: '#00875A' }}>
-                  PostgreSQL 147.15.72.151
-                </AppText>
-              </View>
             </View>
           </Animated.View>
 

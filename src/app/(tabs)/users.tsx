@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { AppText } from '@/components/atoms/AppText';
+import { ConfirmDialogModal } from '@/components/molecules/ConfirmDialogModal';
 import { BACKEND_API_URL } from '@/services/supabase';
 import { useHabitsStore } from '@/stores/useHabitsStore';
 
