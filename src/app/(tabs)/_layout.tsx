@@ -26,6 +26,7 @@ function WebSidebarNav() {
     {
       title: 'BANCO DE DADOS & APIS',
       items: [
+        { name: 'habits', title: 'Database Explorer', icon: 'server-outline', activeIcon: 'server', path: '/(tabs)/habits' },
         { name: 'stats', title: 'Feature Flags & Módulos', icon: 'toggle-outline', activeIcon: 'toggle', path: '/(tabs)/stats' },
       ],
     },

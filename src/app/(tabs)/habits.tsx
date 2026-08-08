@@ -14,16 +14,26 @@ import { useHabitsStore } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { HabitCard } from '@/components/molecules/HabitCard';
 import { CreateHabitModal } from '@/components/organisms/CreateHabitModal';
-import { BACKEND_API_URL } from '@/services/supabase';
+import { getSupportTickets, type SupportTicket } from '@/services/tickets';
+
+type TableName = 'support_tickets' | 'users' | 'habits' | 'habit_logs';
 
 export default function HabitsScreen() {
   const { colors, isDark } = useTheme();
   const habits = useHabitsStore((state) => state.habits);
+  const logs = useHabitsStore((state) => state.logs);
   const isWeb = Platform.OS === 'web';
 
   // Web Database Explorer state
-  const [selectedTable, setSelectedTable] = useState<'users' | 'habits' | 'habit_logs'>('users');
+  const [selectedTable, setSelectedTable] = useState<TableName>('support_tickets');
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (isWeb) {
+      getSupportTickets().then(setTickets);
+    }
+  }, [isWeb, selectedTable]);
 
   const cardBg = isDark ? '#172B4D' : '#FFFFFF';
   const borderColor = isDark ? '#253858' : '#DFE1E6';
@@ -45,20 +55,30 @@ export default function HabitsScreen() {
           <Animated.View entering={FadeInDown.duration(300)} style={styles.webHeader}>
             <View style={{ flex: 1 }}>
               <AppText variant="h2" style={{ fontWeight: '700', fontSize: 20, letterSpacing: -0.3 }}>
-                Database Explorer (PostgreSQL 16)
+                Database Explorer (PostgreSQL 16 Engine)
               </AppText>
               <AppText variant="caption" color="textSecondary" style={{ marginTop: 2, fontSize: 13 }}>
-                Inspeção de tabelas, esquemas e registros em tempo real no servidor Oracle VPS
+                Inspeção de tabelas, esquemas e registros em tempo real no banco do servidor Oracle VPS
               </AppText>
             </View>
+            <TouchableOpacity
+              style={[styles.btnRefresh, { backgroundColor: '#0052CC' }]}
+              onPress={() => getSupportTickets().then(setTickets)}
+            >
+              <Ionicons name="refresh" size={14} color="#FFF" />
+              <AppText style={{ color: '#FFF', fontWeight: '600', fontSize: 12, marginLeft: 4 }}>
+                Recarregar Dados
+              </AppText>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Table Selector Tabs */}
           <Animated.View entering={FadeInDown.delay(60).duration(300)} style={styles.tableTabRow}>
             {[
-              { id: 'users', label: 'Tabela public.users', icon: 'people-outline' },
-              { id: 'habits', label: 'Tabela public.habits', icon: 'list-outline' },
-              { id: 'habit_logs', label: 'Tabela public.habit_logs', icon: 'time-outline' },
+              { id: 'support_tickets', label: 'public.support_tickets', icon: 'ticket-outline' },
+              { id: 'users', label: 'public.users', icon: 'people-outline' },
+              { id: 'habits', label: 'public.habits', icon: 'list-outline' },
+              { id: 'habit_logs', label: 'public.habit_logs', icon: 'time-outline' },
             ].map((t) => {
               const isSelected = selectedTable === t.id;
               return (
@@ -90,81 +110,130 @@ export default function HabitsScreen() {
             })}
           </Animated.View>
 
-          {/* Schema & Data Viewer */}
+          {/* Data Table Grid */}
           <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.dbViewerCard, { backgroundColor: cardBg, borderColor }]}>
             <View style={styles.schemaHeaderRow}>
               <MaterialCommunityIcons name="table-search" size={18} color="#0052CC" />
               <AppText style={{ fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
-                Visualização: public.{selectedTable} (3 colunas chave)
+                Tabela: public.{selectedTable} ({
+                  selectedTable === 'support_tickets' ? tickets.length :
+                  selectedTable === 'habits' ? habits.length :
+                  selectedTable === 'habit_logs' ? logs.length : 2
+                } registros)
               </AppText>
             </View>
 
-            {/* Simulated Table Data Stream */}
-            <View style={styles.tableContainer}>
-              <View style={[styles.thRow, { backgroundColor: headerBg, borderBottomColor: borderColor }]}>
-                <AppText variant="caption" style={[styles.th, { flex: 1.5 }]} color="textSecondary">COLUMN</AppText>
-                <AppText variant="caption" style={[styles.th, { flex: 1.5 }]} color="textSecondary">DATA TYPE</AppText>
-                <AppText variant="caption" style={[styles.th, { flex: 2 }]} color="textSecondary">CONSTRAINTS</AppText>
-                <AppText variant="caption" style={[styles.th, { flex: 3 }]} color="textSecondary">AMOSTRA DE DADOS</AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator>
+              <View style={styles.tableContainer}>
+                {/* Support Tickets Table */}
+                {selectedTable === 'support_tickets' && (
+                  <>
+                    <View style={[styles.thRow, { backgroundColor: headerBg, borderBottomColor: borderColor }]}>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">ID</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 140 }]} color="textSecondary">USUÁRIO</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 180 }]} color="textSecondary">ASSUNTO</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 220 }]} color="textSecondary">MENSAGEM</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">STATUS</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 140 }]} color="textSecondary">DATA CRIADO</AppText>
+                    </View>
+
+                    {tickets.length === 0 ? (
+                      <View style={{ padding: 20 }}>
+                        <AppText variant="caption" color="textSecondary" align="center">
+                          Nenhum chamado registrado no banco de dados.
+                        </AppText>
+                      </View>
+                    ) : (
+                      tickets.map((ticket) => (
+                        <View key={ticket.id} style={[styles.trRow, { borderBottomColor: borderColor }]}>
+                          <AppText style={[styles.td, { width: 100, fontWeight: '700' }]}>{ticket.id}</AppText>
+                          <AppText style={[styles.td, { width: 140 }]}>{ticket.userName}</AppText>
+                          <AppText style={[styles.td, { width: 180, fontWeight: '600', color: '#0052CC' }]}>{ticket.subject}</AppText>
+                          <AppText style={[styles.td, { width: 220, color: colors.textSecondary }]} numberOfLines={2}>{ticket.message}</AppText>
+                          <AppText style={[styles.td, { width: 100, fontWeight: '700', color: ticket.status === 'open' ? '#DE350B' : '#00875A' }]}>
+                            {ticket.status.toUpperCase()}
+                          </AppText>
+                          <AppText style={[styles.td, { width: 140, color: colors.textSecondary }]}>
+                            {new Date(ticket.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </AppText>
+                        </View>
+                      ))
+                    )}
+                  </>
+                )}
+
+                {/* Users Table */}
+                {selectedTable === 'users' && (
+                  <>
+                    <View style={[styles.thRow, { backgroundColor: headerBg, borderBottomColor: borderColor }]}>
+                      <AppText variant="caption" style={[styles.th, { width: 120 }]} color="textSecondary">ID</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 160 }]} color="textSecondary">NOME</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 200 }]} color="textSecondary">EMAIL</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">WAKE_TIME</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">SLEEP_TIME</AppText>
+                    </View>
+
+                    <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
+                      <AppText style={[styles.td, { width: 120, fontWeight: '700' }]}>u-101</AppText>
+                      <AppText style={[styles.td, { width: 160 }]}>Gabriel Monte</AppText>
+                      <AppText style={[styles.td, { width: 200, color: '#0052CC' }]}>gabriel@liferoutine.com</AppText>
+                      <AppText style={[styles.td, { width: 100 }]}>07:00</AppText>
+                      <AppText style={[styles.td, { width: 100 }]}>23:00</AppText>
+                    </View>
+
+                    <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
+                      <AppText style={[styles.td, { width: 120, fontWeight: '700' }]}>u-102</AppText>
+                      <AppText style={[styles.td, { width: 160 }]}>Emmanuel Fernando</AppText>
+                      <AppText style={[styles.td, { width: 200, color: '#0052CC' }]}>emmanuelfernando@gmail.com</AppText>
+                      <AppText style={[styles.td, { width: 100 }]}>06:30</AppText>
+                      <AppText style={[styles.td, { width: 100 }]}>22:30</AppText>
+                    </View>
+                  </>
+                )}
+
+                {/* Habits Table */}
+                {selectedTable === 'habits' && (
+                  <>
+                    <View style={[styles.thRow, { backgroundColor: headerBg, borderBottomColor: borderColor }]}>
+                      <AppText variant="caption" style={[styles.th, { width: 80 }]} color="textSecondary">ID</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 160 }]} color="textSecondary">TÍTULO</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">TARGET_COUNT</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">CATEGORY</AppText>
+                    </View>
+
+                    {habits.map((h) => (
+                      <View key={h.id} style={[styles.trRow, { borderBottomColor: borderColor }]}>
+                        <AppText style={[styles.td, { width: 80, fontWeight: '700' }]}>{h.id}</AppText>
+                        <AppText style={[styles.td, { width: 160, fontWeight: '600' }]}>{h.title}</AppText>
+                        <AppText style={[styles.td, { width: 100, color: '#0052CC' }]}>{h.targetCount} {h.unit}</AppText>
+                        <AppText style={[styles.td, { width: 100 }]}>{h.category}</AppText>
+                      </View>
+                    ))}
+                  </>
+                )}
+
+                {/* Habit Logs Table */}
+                {selectedTable === 'habit_logs' && (
+                  <>
+                    <View style={[styles.thRow, { backgroundColor: headerBg, borderBottomColor: borderColor }]}>
+                      <AppText variant="caption" style={[styles.th, { width: 120 }]} color="textSecondary">ID</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 100 }]} color="textSecondary">HABIT_ID</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 120 }]} color="textSecondary">COMPLETED_COUNT</AppText>
+                      <AppText variant="caption" style={[styles.th, { width: 120 }]} color="textSecondary">DATE</AppText>
+                    </View>
+
+                    {logs.map((log) => (
+                      <View key={log.id} style={[styles.trRow, { borderBottomColor: borderColor }]}>
+                        <AppText style={[styles.td, { width: 120, fontWeight: '700' }]}>{log.id}</AppText>
+                        <AppText style={[styles.td, { width: 100 }]}>{log.habitId}</AppText>
+                        <AppText style={[styles.td, { width: 120, color: '#00875A', fontWeight: '700' }]}>{log.completedCount}</AppText>
+                        <AppText style={[styles.td, { width: 120, color: colors.textSecondary }]}>{log.date}</AppText>
+                      </View>
+                    ))}
+                  </>
+                )}
               </View>
-
-              {selectedTable === 'users' && (
-                <>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>id</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>UUID</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>PRIMARY KEY, NOT NULL</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>130e711b-97e5-4d7c...</AppText>
-                  </View>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>email</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>VARCHAR(255)</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>UNIQUE, NOT NULL</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>gabriel@liferoutine.com</AppText>
-                  </View>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>wake_time</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>VARCHAR(10)</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>DEFAULT '07:00'</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>'07:00'</AppText>
-                  </View>
-                </>
-              )}
-
-              {selectedTable === 'habits' && (
-                <>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>id</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>VARCHAR(50)</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>PRIMARY KEY</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>'1' (Beber Água)</AppText>
-                  </View>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>target_count</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>INTEGER</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>DEFAULT 1</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>8</AppText>
-                  </View>
-                </>
-              )}
-
-              {selectedTable === 'habit_logs' && (
-                <>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>id</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>UUID</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>PRIMARY KEY</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>9b21f-88a1...</AppText>
-                  </View>
-                  <View style={[styles.trRow, { borderBottomColor: borderColor }]}>
-                    <AppText style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>completed_at</AppText>
-                    <AppText style={[styles.td, { flex: 1.5, color: '#0052CC' }]}>TIMESTAMP</AppText>
-                    <AppText style={[styles.td, { flex: 2 }]}>DEFAULT NOW()</AppText>
-                    <AppText style={[styles.td, { flex: 3, color: colors.textSecondary }]}>2026-08-08 10:25:00</AppText>
-                  </View>
-                </>
-              )}
-            </View>
+            </ScrollView>
           </Animated.View>
 
           <View style={{ height: 40 }} />
@@ -219,23 +288,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
+  btnRefresh: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   tableTabRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   dbTabBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
   },
   dbViewerCard: {
-    padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
+    padding: 16,
+    overflow: 'hidden',
   },
   schemaHeaderRow: {
     flexDirection: 'row',
@@ -243,45 +321,43 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   tableContainer: {
-    borderRadius: 6,
-    borderWidth: 1,
-    overflow: 'hidden',
+    minWidth: 700,
   },
   thRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     borderBottomWidth: 1,
+    borderRadius: 6,
   },
   th: {
-    fontSize: 11,
     fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   trRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
   td: {
-    fontSize: 12,
+    fontSize: 13,
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  list: {
-    gap: 12,
-  },
+  list: { gap: 12 },
 });
