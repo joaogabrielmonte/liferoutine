@@ -15,32 +15,41 @@ function WebSidebarNav() {
   const pathname = usePathname();
 
   const sidebarNavItems = [
-    { name: 'index', title: 'Hoje & Dashboard', icon: 'home-outline', activeIcon: 'home', path: '/(tabs)' },
-    { name: 'habits', title: 'Gerenciar Hábitos', icon: 'list-outline', activeIcon: 'list', path: '/(tabs)/habits' },
-    { name: 'stats', title: 'Progresso & Analytics', icon: 'bar-chart-outline', activeIcon: 'bar-chart', path: '/(tabs)/stats' },
-    { name: 'users', title: 'Gestão de Usuários', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
-    { name: 'profile', title: 'Perfil & Configurações', icon: 'person-outline', activeIcon: 'person', path: '/(tabs)/profile' },
+    { name: 'index', title: 'Visão Geral & Dashboard', icon: 'speedometer-outline', activeIcon: 'speedometer', path: '/(tabs)' },
+    { name: 'users', title: 'Gestão de Usuários & Roles', icon: 'people-outline', activeIcon: 'people', path: '/(tabs)/users' },
+    { name: 'habits', title: 'Hábitos Globais', icon: 'list-outline', activeIcon: 'list', path: '/(tabs)/habits' },
+    { name: 'stats', title: 'Analytics & Relatórios', icon: 'bar-chart-outline', activeIcon: 'bar-chart', path: '/(tabs)/stats' },
+    { name: 'profile', title: 'Configurações do Servidor', icon: 'settings-outline', activeIcon: 'settings', path: '/(tabs)/profile' },
   ];
 
   return (
     <View style={[styles.sidebar, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
       {/* Brand Header */}
       <View style={styles.sidebarHeader}>
-        <View style={[styles.logoIcon, { backgroundColor: `${colors.primary}22` }]}>
-          <MaterialCommunityIcons name="lightning-bolt" size={26} color={colors.primary} />
+        <View style={[styles.logoIcon, { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: 'rgba(139, 92, 246, 0.4)' }]}>
+          <MaterialCommunityIcons name="lightning-bolt" size={26} color="#C084FC" />
         </View>
-        <View>
-          <AppText variant="h3" style={{ fontWeight: '800' }}>
-            LifeRoutine
-          </AppText>
-          <AppText variant="caption" color="textSecondary">
-            Sistema Web & Admin
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText variant="h3" style={{ fontWeight: '900', letterSpacing: 0.5 }}>
+              LifeRoutine
+            </AppText>
+            <View style={styles.proTag}>
+              <AppText style={{ fontSize: 9, fontWeight: '800', color: '#FFF' }}>ADMIN</AppText>
+            </View>
+          </View>
+          <AppText variant="caption" color="textSecondary" style={{ fontSize: 11 }}>
+            Command Center • Oracle VPS
           </AppText>
         </View>
       </View>
 
       {/* Nav items */}
       <View style={styles.sidebarNavList}>
+        <AppText variant="caption" color="textTertiary" style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 6, paddingLeft: 8 }}>
+          NAVEGAÇÃO PRINCIPAL
+        </AppText>
+
         {sidebarNavItems.map((item) => {
           const isSelected =
             item.name === 'index'
@@ -59,6 +68,7 @@ function WebSidebarNav() {
               onPress={() => router.push(item.path as any)}
               activeOpacity={0.7}
             >
+              {isSelected && <View style={styles.activeGlowPill} />}
               <Ionicons
                 name={(isSelected ? item.activeIcon : item.icon) as any}
                 size={20}
@@ -66,8 +76,8 @@ function WebSidebarNav() {
               />
               <AppText
                 style={{
-                  fontSize: 14,
-                  fontWeight: isSelected ? '700' : '600',
+                  fontSize: 13,
+                  fontWeight: isSelected ? '800' : '600',
                   color: isSelected ? '#FFFFFF' : colors.textSecondary,
                   marginLeft: Spacing.sm,
                 }}
@@ -79,28 +89,45 @@ function WebSidebarNav() {
         })}
       </View>
 
-      {/* Footer Theme & Server Status */}
+      {/* Super Admin User Profile Card & Footer */}
       <View style={[styles.sidebarFooter, { borderTopColor: colors.border }]}>
+        <View style={[styles.adminUserCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.adminAvatar, { backgroundColor: '#8B5CF6' }]}>
+            <AppText style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>GM</AppText>
+          </View>
+          <View style={{ flex: 1, marginLeft: Spacing.xs }}>
+            <AppText variant="caption" style={{ fontWeight: '800' }}>
+              Gabriel Monte
+            </AppText>
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10 }}>
+              gabriel@liferoutine.com
+            </AppText>
+          </View>
+          <View style={styles.onlineBadge}>
+            <View style={styles.statusDot} />
+          </View>
+        </View>
+
         <View style={styles.themeRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.primary} />
-            <AppText variant="caption" style={{ marginLeft: 6, fontWeight: '600' }}>
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={16} color={colors.primary} />
+            <AppText variant="caption" style={{ marginLeft: 6, fontWeight: '700' }}>
               Tema {isDark ? 'Escuro' : 'Claro'}
             </AppText>
           </View>
 
           <TouchableOpacity
             onPress={() => setTheme(isDark ? 'light' : 'dark')}
-            style={[styles.themeToggleBtn, { backgroundColor: colors.background }]}
+            style={[styles.themeToggleBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
           >
-            <Ionicons name="swap-horizontal" size={16} color={colors.text} />
+            <Ionicons name="swap-horizontal" size={14} color={colors.text} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.dbStatusPill}>
           <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
           <AppText style={{ fontSize: 11, color: '#22C55E', fontWeight: '700' }}>
-            VPS PostgreSQL Online
+            Oracle VPS PostgreSQL Online
           </AppText>
         </View>
       </View>
@@ -219,50 +246,92 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 260,
+    width: 270,
     height: '100%',
     borderRightWidth: 1,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     justifyContent: 'space-between',
     ...Shadow.sm,
   },
   sidebarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xl,
+    gap: Spacing.xs,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: 4,
   },
   logoIcon: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+  },
+  proTag: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   sidebarNavList: {
     flex: 1,
-    gap: Spacing.xs,
+    gap: 4,
   },
   sidebarItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    borderRadius: Radius.lg,
+    paddingVertical: 11,
+    borderRadius: Radius.md,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  activeGlowPill: {
+    position: 'absolute',
+    left: 0,
+    top: 6,
+    bottom: 6,
+    width: 4,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
   sidebarFooter: {
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  adminUserCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  adminAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onlineBadge: {
+    padding: 4,
   },
   themeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 4,
   },
   themeToggleBtn: {
-    padding: 6,
-    borderRadius: Radius.md,
+    padding: 4,
+    paddingHorizontal: 8,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
   },
   dbStatusPill: {
     flexDirection: 'row',
@@ -277,6 +346,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: '#22C55E',
   },
   contentWrapper: {
     flex: 1,
