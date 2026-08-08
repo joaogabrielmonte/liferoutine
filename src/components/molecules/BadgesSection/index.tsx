@@ -2,8 +2,10 @@ import React from 'react';
 import { View, ScrollView, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
+import { useHabitsStore } from '@/stores/useHabitsStore';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
+import { calculateUserXP, getUserLevelInfo } from '@/services/gamification';
 import { Radius, Spacing, Shadow } from '@/constants/theme';
 import type { HabitWithLogs } from '@/types/habit';
 
@@ -23,6 +25,11 @@ type BadgesSectionProps = {
 
 export function BadgesSection({ habits }: BadgesSectionProps) {
   const { colors, isDark } = useTheme();
+  const logs = useHabitsStore((state) => state.logs);
+
+  // Gamification Level & XP
+  const totalXP = calculateUserXP(habits, logs);
+  const levelInfo = getUserLevelInfo(totalXP);
 
   // Calculate dynamic stats
   const totalWaterLog = habits.find((h) => h.id === '1' || h.title.toLowerCase().includes('agua'))?.todayLog?.completedCount ?? 0;
@@ -71,6 +78,33 @@ export function BadgesSection({ habits }: BadgesSectionProps) {
 
   return (
     <View style={styles.container}>
+      {/* Gamification Level Banner */}
+      <AppCard style={[styles.levelCard, { backgroundColor: isDark ? '#172B4D' : '#FFFFFF', borderColor: levelInfo.color }]}>
+        <View style={styles.levelRow}>
+          <View style={[styles.levelBadge, { backgroundColor: `${levelInfo.color}22` }]}>
+            <MaterialCommunityIcons name="lightning-bolt" size={22} color={levelInfo.color} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <AppText style={{ fontWeight: '700', fontSize: 13, color: levelInfo.color }}>
+                NÍVEL {levelInfo.level} • {levelInfo.title.toUpperCase()}
+              </AppText>
+              <AppText style={{ fontWeight: '700', fontSize: 12, color: colors.textSecondary }}>
+                {totalXP} XP
+              </AppText>
+            </View>
+
+            {/* XP Bar */}
+            <View style={[styles.xpTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }]}>
+              <View style={[styles.xpFill, { width: `${levelInfo.progressPercent}%`, backgroundColor: levelInfo.color }]} />
+            </View>
+            <AppText variant="caption" color="textSecondary" style={{ fontSize: 10, marginTop: 2 }}>
+              {levelInfo.currentXP} / {levelInfo.xpForNextLevel} XP para o próximo nível ({levelInfo.progressPercent}%)
+            </AppText>
+          </View>
+        </View>
+      </AppCard>
+
       <View style={styles.headerRow}>
         <AppText variant="title">Conquistas & Medalhas</AppText>
         <AppText variant="caption" color="textSecondary">
@@ -144,6 +178,33 @@ export function BadgesSection({ habits }: BadgesSectionProps) {
 const styles = StyleSheet.create({
   container: {
     marginVertical: Spacing.xs,
+  },
+  levelCard: {
+    padding: 12,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    marginBottom: 16,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levelBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  xpTrack: {
+    height: 6,
+    borderRadius: 3,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  xpFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   headerRow: {
     flexDirection: 'row',
