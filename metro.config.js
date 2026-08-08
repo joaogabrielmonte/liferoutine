@@ -3,36 +3,44 @@ const { getDefaultConfig } = require('expo/metro-config');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-const defaultSerializer = config.serializer?.customSerializer;
+// Intercept all Metro Web HTTP responses and replace import.meta dynamically before sending to Chrome
+config.server = {
+  ...config.server,
+  enhanceMiddleware: (middleware) => {
+    return (req, res, next) => {
+      if (req.url && (req.url.includes('.bundle') || req.url.includes('platform=web') || req.url.includes('_expo'))) {
+        const chunks = [];
+        const originalWrite = res.write;
+        const originalEnd = res.end;
 
-config.serializer = {
-  ...config.serializer,
-  customSerializer: async (entryPoint, preModules, graph, options) => {
-    let code;
-    if (defaultSerializer) {
-      code = await defaultSerializer(entryPoint, preModules, graph, options);
-    } else {
-      const { baseJSBundle } = require('metro/src/DeltaBundler/Serializers/baseJSBundle');
-      const { bundleToString } = require('metro/src/lib/bundleToString');
-      const bundle = baseJSBundle(entryPoint, preModules, graph, options);
-      code = bundleToString(bundle).code;
-    }
+        res.write = function (chunk, encoding, callback) {
+          if (chunk) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+          }
+          return true;
+        };
 
-    if (options.platform === 'web') {
-      if (typeof code === 'string') {
-        return code.replace(
-          /import\.meta/g,
-          '({ url: typeof location !== "undefined" ? location.href : "", env: typeof process !== "undefined" ? process.env : {} })'
-        );
-      } else if (code && typeof code.code === 'string') {
-        code.code = code.code.replace(
-          /import\.meta/g,
-          '({ url: typeof location !== "undefined" ? location.href : "", env: typeof process !== "undefined" ? process.env : {} })'
-        );
+        res.end = function (chunk, encoding, callback) {
+          if (chunk) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+          }
+          let body = Buffer.concat(chunks).toString('utf8');
+
+          // Replace import.meta with browser-safe object
+          if (body.includes('import.meta')) {
+            body = body.replace(
+              /import\.meta/g,
+              '({ url: typeof location !== "undefined" ? location.href : "", hot: null, env: typeof process !== "undefined" ? process.env : {} })'
+            );
+          }
+
+          res.setHeader('Content-Length', Buffer.byteLength(body));
+          originalWrite.call(res, body, 'utf8');
+          return originalEnd.call(res, callback);
+        };
       }
-    }
-
-    return code;
+      return middleware(req, res, next);
+    };
   },
 };
 
