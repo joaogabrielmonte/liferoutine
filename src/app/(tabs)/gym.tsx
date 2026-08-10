@@ -314,24 +314,6 @@ export default function GymScreen() {
         {/* TAB 1: WORKOUT SPLITS */}
         {activeTab === 'splits' && (
           <Animated.View entering={FadeInDown.duration(300)}>
-            {/* AI Personal Assistant Banner */}
-            <TouchableOpacity
-              style={[styles.aiBanner, { backgroundColor: '#8B5CF6' }]}
-              onPress={() => setIsAiModalOpen(true)}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="robot" size={24} color="#FFF" />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>
-                  Ficha de Treino com Personal IA 🤖
-                </AppText>
-                <AppText style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
-                  Gere o treino ideal para seu objetivo e monte suas fichas automaticamente
-                </AppText>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#FFF" />
-            </TouchableOpacity>
-
             <View style={styles.sectionHeader}>
               <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>
                 Suas Divisões de Treino
@@ -428,13 +410,6 @@ export default function GymScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
-
-      {/* FIT AI CHAT ASSISTANT MODAL */}
-      <FitAIChatModal
-        visible={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
-        onImportSplits={handleImportAiSplits}
-      />
 
       {/* CREATE WORKOUT SPLIT MODAL */}
       <Modal

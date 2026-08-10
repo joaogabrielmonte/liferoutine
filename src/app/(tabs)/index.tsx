@@ -27,7 +27,6 @@ import { CreateHabitModal } from '@/components/organisms/CreateHabitModal';
 import { WaterCounterModal } from '@/components/organisms/WaterCounterModal';
 import { ExerciseTimerModal } from '@/components/organisms/ExerciseTimerModal';
 import { GenericHabitCounterModal } from '@/components/organisms/GenericHabitCounterModal';
-import { GymWorkoutCard } from '@/components/organisms/GymWorkoutCard';
 import { getSupportTickets, updateTicketStatus, SupportTicket, TicketStatus } from '@/services/tickets';
 import { Spacing, Palette } from '@/constants/theme';
 import type { HabitWithLogs } from '@/types/habit';
@@ -506,9 +505,6 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.delay(150).duration(500)}>
           <BadgesSection habits={todayHabits} />
         </Animated.View>
-
-        {/* Academia & Treino Fitness Suite */}
-        <GymWorkoutCard />
 
         {/* Hábitos de hoje */}
         <Animated.View

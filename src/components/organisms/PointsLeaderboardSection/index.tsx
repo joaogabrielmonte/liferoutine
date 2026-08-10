@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
@@ -11,6 +11,15 @@ import {
   getLevelInfo,
 } from '@/stores/usePointsStore';
 import { Spacing, Radius } from '@/constants/theme';
+
+const ALL_LEVELS = [
+  { level: 1, name: 'Iniciante Fit 🌱', reqXp: 0, color: '#10B981', badge: 'seed-outline' },
+  { level: 2, name: 'Atleta Bronze 🥉', reqXp: 300, color: '#D97706', badge: 'medal-outline' },
+  { level: 3, name: 'Atleta Prata 🥈', reqXp: 800, color: '#94A3B8', badge: 'ribbon-outline' },
+  { level: 4, name: 'Atleta Ouro 🥇', reqXp: 1500, color: '#FFAB00', badge: 'trophy-outline' },
+  { level: 5, name: 'Elite Diamante 💎', reqXp: 3000, color: '#3B82F6', badge: 'diamond-outline' },
+  { level: 6, name: 'Mestre LifeRoutine 🏆', reqXp: 5000, color: '#8B5CF6', badge: 'crown-outline' },
+];
 
 export function PointsLeaderboardSection() {
   const { colors, isDark } = useTheme();
@@ -64,8 +73,110 @@ export function PointsLeaderboardSection() {
         </AppCard>
       </Animated.View>
 
+      {/* GALERIA DE TODOS OS NÍVEIS & CONQUISTAS */}
+      <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+        <AppCard style={{ padding: Spacing.base }}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="trophy-outline" size={20} color="#FFAB00" />
+            <AppText variant="h3" style={{ fontSize: 15, fontWeight: '700', marginLeft: 6 }}>
+              Galeria de Níveis & Conquistas
+            </AppText>
+          </View>
+          <AppText variant="caption" color="textSecondary" style={{ fontSize: 12, marginBottom: 12 }}>
+            Conquiste pontos XP para desbloquear os emblemas de cada nível:
+          </AppText>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {ALL_LEVELS.map((lvl) => {
+                const isUnlocked = userXp >= lvl.reqXp;
+                const isCurrent = levelInfo.levelNum === lvl.level;
+
+                return (
+                  <View
+                    key={lvl.level}
+                    style={[
+                      styles.levelBadgeCard,
+                      {
+                        backgroundColor: isCurrent
+                          ? 'rgba(255, 171, 0, 0.12)'
+                          : isUnlocked
+                          ? isDark
+                            ? '#0F172A'
+                            : '#F8FAFC'
+                          : isDark
+                          ? '#1E293B'
+                          : '#F1F5F9',
+                        borderColor: isCurrent ? '#FFAB00' : isUnlocked ? lvl.color : borderColor,
+                        borderWidth: isCurrent ? 2 : 1,
+                        opacity: isUnlocked ? 1 : 0.6,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.levelIconCircle,
+                        { backgroundColor: isUnlocked ? `${lvl.color}22` : '#334155' },
+                      ]}
+                    >
+                      <Ionicons
+                        name={isUnlocked ? (lvl.badge as any) : 'lock-closed-outline'}
+                        size={22}
+                        color={isUnlocked ? lvl.color : '#94A3B8'}
+                      />
+                    </View>
+
+                    <AppText
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: isCurrent ? '#FFAB00' : isUnlocked ? colors.text : colors.textSecondary,
+                        marginTop: 6,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {lvl.name}
+                    </AppText>
+
+                    <AppText
+                      variant="caption"
+                      color="textSecondary"
+                      style={{ fontSize: 10, marginTop: 2, textAlign: 'center' }}
+                    >
+                      {lvl.reqXp} XP
+                    </AppText>
+
+                    <View style={{ marginTop: 6 }}>
+                      {isCurrent ? (
+                        <View style={[styles.statusTag, { backgroundColor: '#FFAB00' }]}>
+                          <AppText style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>
+                            ATUAL
+                          </AppText>
+                        </View>
+                      ) : isUnlocked ? (
+                        <View style={[styles.statusTag, { backgroundColor: '#10B981' }]}>
+                          <AppText style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>
+                            CONQUISTADO
+                          </AppText>
+                        </View>
+                      ) : (
+                        <View style={[styles.statusTag, { backgroundColor: '#64748B' }]}>
+                          <AppText style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>
+                            BLOQUEADO
+                          </AppText>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </AppCard>
+      </Animated.View>
+
       {/* GAMIFICATION & POINTS EXPLANATION SYSTEM */}
-      <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+      <Animated.View entering={FadeInDown.delay(160).duration(400)}>
         <AppCard style={{ padding: Spacing.base }}>
           <View style={styles.sectionTitleRow}>
             <MaterialCommunityIcons name="star-circle" size={20} color={colors.primary} />
@@ -101,7 +212,7 @@ export function PointsLeaderboardSection() {
       </Animated.View>
 
       {/* GLOBAL USER LEADERBOARD (RANKING) */}
-      <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+      <Animated.View entering={FadeInDown.delay(240).duration(400)}>
         <AppCard style={{ padding: Spacing.base }}>
           <View style={styles.sectionTitleRow}>
             <MaterialCommunityIcons name="medal" size={20} color="#FFAB00" />
@@ -132,7 +243,6 @@ export function PointsLeaderboardSection() {
                     },
                   ]}
                 >
-                  {/* Rank Position */}
                   <View style={styles.rankCol}>
                     <AppText
                       style={{
@@ -145,10 +255,8 @@ export function PointsLeaderboardSection() {
                     </AppText>
                   </View>
 
-                  {/* Avatar */}
                   <AppText style={{ fontSize: 20, marginHorizontal: 6 }}>{user.avatar}</AppText>
 
-                  {/* Name & Level */}
                   <View style={{ flex: 1 }}>
                     <AppText
                       style={{
@@ -164,7 +272,6 @@ export function PointsLeaderboardSection() {
                     </AppText>
                   </View>
 
-                  {/* XP */}
                   <View style={styles.xpBox}>
                     <AppText style={{ fontWeight: '800', fontSize: 13, color: colors.text }}>
                       {user.xp} XP
@@ -217,6 +324,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  levelBadgeCard: {
+    width: 120,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  levelIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   ruleRow: {
     flexDirection: 'row',
