@@ -23,7 +23,11 @@ const ALL_LEVELS = [
 
 export function PointsLeaderboardSection() {
   const { colors, isDark } = useTheme();
-  const { userXp, leaderboard, getUserRank } = usePointsStore();
+  const { userXp, leaderboard, getUserRank, fetchRealLeaderboard } = usePointsStore();
+
+  React.useEffect(() => {
+    fetchRealLeaderboard();
+  }, []);
 
   const levelInfo = getLevelInfo(userXp);
   const userRank = getUserRank();

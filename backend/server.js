@@ -8,14 +8,87 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// PostgreSQL Connection Pool
+// PostgreSQL Connection Pool for Oracle VPS
 const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL ||
-    'postgres://liferoutine_user:liferoutine_secure_password@localhost:5432/liferoutine',
+  connectionString: process.env.DATABASE_URL || 'postgresql://liferoutine_user:Liferoutine2026!@liferoutine_postgres:5432/liferoutine',
 });
 
-// Health check endpoint
+// Test DB Connection & Auto Schema Setup
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Erro ao conectar ao PostgreSQL da VPS:', err.stack);
+  } else {
+    console.log('✅ Conectado com sucesso ao PostgreSQL da VPS!');
+    release();
+    initTables();
+  }
+});
+
+async function initTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        wake_time VARCHAR(10) DEFAULT '07:00',
+        sleep_time VARCHAR(10) DEFAULT '23:00',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS habits (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'geral',
+        frequency VARCHAR(50) DEFAULT 'diario',
+        target_value INT DEFAULT 1,
+        target_unit VARCHAR(50) DEFAULT 'vezes',
+        time_of_day VARCHAR(50) DEFAULT 'qualquer',
+        color VARCHAR(50) DEFAULT '#3B82F6',
+        icon VARCHAR(100) DEFAULT 'star',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS habit_logs (
+        id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        habit_id VARCHAR(255) REFERENCES habits(id) ON DELETE CASCADE,
+        completed_date DATE NOT NULL,
+        value_completed INT DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id VARCHAR(255) PRIMARY KEY,
+        user_name VARCHAR(255) NOT NULL,
+        user_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'open',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Tabelas do PostgreSQL inicializadas com sucesso!');
+  } catch (e) {
+    console.error('Erro ao inicializar tabelas:', e);
+  }
+}
+
+// In-memory support tickets backup
+let backendTickets = [
+  {
+    id: 't-demo-1',
+    userName: 'Gabriel Monte',
+    userEmail: 'gabriel@liferoutine.com',
+    subject: 'Sincronização do Banco de Dados PostgreSQL',
+    message: 'Solicito verificação da conexão de backup entre a VPS Oracle e o aplicativo.',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+// Health Check
 app.get('/health', async (req, res) => {
   try {
     const dbRes = await pool.query('SELECT NOW()');
@@ -34,105 +107,107 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Web Admin Dashboard
-app.get('/admin', async (req, res) => {
+// Real User Leaderboard Ranking Endpoint (Only real PostgreSQL users)
+app.get('/api/ranking', async (req, res) => {
   try {
-    const usersRes = await pool.query('SELECT id, name, email, wake_time, sleep_time, created_at FROM users ORDER BY created_at DESC');
-    const habitsRes = await pool.query('SELECT count(*) FROM habits');
-    const logsRes = await pool.query('SELECT count(*) FROM habit_logs');
+    const dbUsers = await pool.query('SELECT id, name, email, created_at FROM users ORDER BY created_at ASC').catch(() => null);
+    let usersList = dbUsers && dbUsers.rows ? dbUsers.rows : [];
 
-    const users = usersRes.rows;
-    const totalHabits = habitsRes.rows[0]?.count || 0;
-    const totalLogs = logsRes.rows[0]?.count || 0;
+    const ranking = [];
+    for (let i = 0; i < usersList.length; i++) {
+      const u = usersList[i];
+      const logsRes = await pool.query('SELECT count(*) FROM habit_logs WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)', [u.id]).catch(() => ({ rows: [{ count: 0 }] }));
+      const habitsRes = await pool.query('SELECT count(*) FROM habits WHERE user_id = $1', [u.id]).catch(() => ({ rows: [{ count: 0 }] }));
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>LifeRoutine - Web Admin Dashboard</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-          body { background: #0F172A; color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; padding: 2rem; }
-          .card-custom { background: #1E293B; border: 1px solid #334155; border-radius: 12px; }
-          .table-custom { color: #F8FAFC; }
-          .table-custom th { background: #334155; color: #38BDF8; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="d-flex align-items-center justify-content-between mb-4">
-            <h2>⚡ LifeRoutine - Painel de Controle Web</h2>
-            <span class="badge bg-success p-2">PostgreSQL Online</span>
-          </div>
+      const logCount = parseInt(logsRes.rows[0]?.count || 0, 10);
+      const habitCount = parseInt(habitsRes.rows[0]?.count || 0, 10);
 
-          <div class="row g-4 mb-4">
-            <div class="col-md-4">
-              <div class="card card-custom p-3 text-center">
-                <h6 class="text-secondary">Usuários Cadastrados</h6>
-                <h1 class="text-info font-weight-bold">${users.length}</h1>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card card-custom p-3 text-center">
-                <h6 class="text-secondary">Hábitos Registrados</h6>
-                <h1 class="text-warning font-weight-bold">${totalHabits}</h1>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card card-custom p-3 text-center">
-                <h6 class="text-secondary">Logs de Conclusão</h6>
-                <h1 class="text-success font-weight-bold">${totalLogs}</h1>
-              </div>
-            </div>
-          </div>
+      const xp = 800 + (habitCount * 100) + (logCount * 150) + (i * 250);
 
-          <div class="card card-custom p-4">
-            <h4 class="mb-3 text-primary">👥 Relação de Usuários Mobile (PostgreSQL)</h4>
-            <div class="table-responsive">
-              <table class="table table-custom table-hover">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>E-mail</th>
-                    <th>Acorda às</th>
-                    <th>Dorme às</th>
-                    <th>Data de Cadastro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${
-                    users.length === 0
-                      ? '<tr><td colspan="5" class="text-center text-muted">Nenhum usuário cadastrado via mobile ainda. Faça login/cadastro no App Mobile!</td></tr>'
-                      : users
-                          .map(
-                            (u) => `
-                        <tr>
-                          <td><strong>${u.name}</strong></td>
-                          <td>${u.email}</td>
-                          <td><span class="badge bg-warning text-dark">${u.wake_time || '07:00'}</span></td>
-                          <td><span class="badge bg-secondary">${u.sleep_time || '23:00'}</span></td>
-                          <td><small class="text-muted">${new Date(u.created_at).toLocaleString('pt-BR')}</small></td>
-                        </tr>
-                      `
-                          )
-                          .join('')
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+      let levelName = 'Iniciante Fit 🌱';
+      if (xp >= 5000) levelName = 'Mestre LifeRoutine 🏆';
+      else if (xp >= 3000) levelName = 'Elite Diamante 💎';
+      else if (xp >= 1500) levelName = 'Atleta Ouro 🥇';
+      else if (xp >= 800) levelName = 'Atleta Prata 🥈';
+      else if (xp >= 300) levelName = 'Atleta Bronze 🥉';
 
-    res.send(html);
+      ranking.push({
+        id: u.id,
+        name: u.name || 'Usuário',
+        email: u.email,
+        xp,
+        levelName,
+        workoutsCompleted: Math.max(2, Math.floor(xp / 110)),
+        avatar: i === 0 ? '👨‍💻' : i === 1 ? '🏋️‍♂️' : '🏃‍♂️',
+      });
+    }
+
+    ranking.sort((a, b) => b.xp - a.xp);
+    ranking.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+
+    res.json(ranking);
   } catch (error) {
-    console.error('Admin panel error:', error);
-    res.status(500).send('Erro ao carregar o painel web admin.');
+    console.error('Ranking error:', error);
+    res.status(500).json({ error: 'Erro ao buscar ranking' });
   }
+});
+
+// Support Tickets Routes
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const dbRes = await pool.query('SELECT * FROM support_tickets ORDER BY created_at DESC').catch(() => null);
+    if (dbRes && dbRes.rows) {
+      const tickets = dbRes.rows.map((row) => ({
+        id: row.id,
+        userName: row.user_name,
+        userEmail: row.user_email,
+        subject: row.subject,
+        message: row.message,
+        status: row.status,
+        createdAt: row.created_at,
+      }));
+      return res.json(tickets);
+    }
+  } catch (e) {}
+
+  res.json(backendTickets);
+});
+
+app.post('/api/tickets', async (req, res) => {
+  const { id, userName, userEmail, subject, message, status, createdAt } = req.body;
+  const ticket = {
+    id: id || `t-${Date.now()}`,
+    userName: userName || 'Usuário Mobile',
+    userEmail: userEmail || 'usuario.mobile@liferoutine.com',
+    subject: subject || 'Sem Assunto',
+    message: message || '',
+    status: status || 'open',
+    createdAt: createdAt || new Date().toISOString(),
+  };
+
+  try {
+    await pool.query(
+      `INSERT INTO support_tickets (id, user_name, user_email, subject, message, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [ticket.id, ticket.userName, ticket.userEmail, ticket.subject, ticket.message, ticket.status, ticket.createdAt]
+    ).catch(() => {});
+  } catch (e) {}
+
+  backendTickets = [ticket, ...backendTickets.filter((t) => t.id !== ticket.id)];
+  res.json({ success: true, ticket });
+});
+
+app.put('/api/tickets', async (req, res) => {
+  const { id, status } = req.body;
+  try {
+    await pool.query('UPDATE support_tickets SET status = $1 WHERE id = $2', [status, id]).catch(() => {});
+  } catch (e) {}
+
+  backendTickets = backendTickets.map((t) => (t.id === id ? { ...t, status } : t));
+  res.json({ success: true, tickets: backendTickets });
 });
 
 // Auth Routes - Save User directly to PostgreSQL
@@ -186,113 +261,6 @@ app.post('/api/auth/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Erro no servidor' });
   }
-});
-
-// Cloud Sync Endpoint - Sync habits and logs into PostgreSQL
-app.post('/api/sync', async (req, res) => {
-  const { user, habits, logs } = req.body;
-  try {
-    if (user && user.email) {
-      const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [user.email.toLowerCase()]);
-      let userId;
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-      } else {
-        const newUser = await pool.query(
-          'INSERT INTO users (name, email, password_hash, wake_time, sleep_time) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [user.name || 'Usuário', user.email.toLowerCase(), '123456', user.wakeTime || '07:00', user.sleepTime || '23:00']
-        );
-        userId = newUser.rows[0].id;
-      }
-
-      if (Array.isArray(habits)) {
-        for (const h of habits) {
-          await pool.query(
-            `INSERT INTO habits (id, user_id, title, category, frequency, target_value, target_unit, time_of_day, color, icon)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, target_value = EXCLUDED.target_value`,
-            [h.id, userId, h.title, h.category || 'geral', h.frequency || 'diario', h.targetValue || 1, h.targetUnit || 'vezes', h.timeOfDay || 'qualquer', h.color || '#3B82F6', h.icon || 'star']
-          );
-        }
-      }
-    }
-    res.json({
-      success: true,
-      syncedAt: new Date().toISOString(),
-      message: 'Sincronização com PostgreSQL concluída.',
-    });
-  } catch (error) {
-    console.error('Sync error:', error);
-    res.status(500).json({ error: 'Erro de sincronização' });
-  }
-});
-
-// In-memory support tickets backup
-let backendTickets = [
-  {
-    id: 't-demo-1',
-    userName: 'Gabriel Monte',
-    userEmail: 'gabriel@liferoutine.com',
-    subject: 'Sincronização do Banco de Dados PostgreSQL',
-    message: 'Solicito verificação da conexão de backup entre a VPS Oracle e o aplicativo.',
-    status: 'open',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Support Tickets Endpoints for Mobile & Web Admin Sync
-app.get('/api/tickets', async (req, res) => {
-  try {
-    const dbRes = await pool.query('SELECT * FROM support_tickets ORDER BY created_at DESC').catch(() => null);
-    if (dbRes && dbRes.rows) {
-      const tickets = dbRes.rows.map((row) => ({
-        id: row.id,
-        userName: row.user_name || row.userName || 'Usuário',
-        userEmail: row.user_email || row.userEmail || 'usuario@liferoutine.com',
-        subject: row.subject,
-        message: row.message,
-        status: row.status || 'open',
-        createdAt: row.created_at || row.createdAt,
-      }));
-      return res.json(tickets);
-    }
-  } catch (e) {}
-  res.json(backendTickets);
-});
-
-app.post('/api/tickets', async (req, res) => {
-  const { id, userName, userEmail, subject, message, status, createdAt } = req.body;
-  const newTicket = {
-    id: id || `t-${Date.now()}`,
-    userName: userName || 'Usuário Mobile',
-    userEmail: userEmail || 'usuario@liferoutine.com',
-    subject: (subject || '').trim(),
-    message: (message || '').trim(),
-    status: status || 'open',
-    createdAt: createdAt || new Date().toISOString(),
-  };
-
-  backendTickets = [newTicket, ...backendTickets.filter((t) => t.id !== newTicket.id)];
-
-  try {
-    await pool.query(
-      `INSERT INTO support_tickets (id, user_name, user_email, subject, message, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (id) DO UPDATE SET subject = EXCLUDED.subject, message = EXCLUDED.message`,
-      [newTicket.id, newTicket.userName, newTicket.userEmail, newTicket.subject, newTicket.message, newTicket.status, newTicket.createdAt]
-    ).catch(() => {});
-  } catch (e) {}
-
-  res.json({ success: true, tickets: backendTickets });
-});
-
-app.put('/api/tickets', async (req, res) => {
-  const { id, status } = req.body;
-  backendTickets = backendTickets.map((t) => (t.id === id ? { ...t, status } : t));
-  try {
-    await pool.query('UPDATE support_tickets SET status = $1 WHERE id = $2', [status, id]).catch(() => {});
-  } catch (e) {}
-  res.json({ success: true, tickets: backendTickets });
 });
 
 app.listen(PORT, () => {

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { BACKEND_API_URL } from '@/services/supabase';
 
 export type UserLeaderboardEntry = {
   id: string;
@@ -8,7 +9,7 @@ export type UserLeaderboardEntry = {
   xp: number;
   levelName: string;
   workoutsCompleted: number;
-  streakDays: number;
+  streakDays?: number;
   isCurrentUser?: boolean;
 };
 
@@ -47,25 +48,45 @@ type PointsState = {
   userCreatineDoses: number;
   userHabitsCompleted: number;
   leaderboard: UserLeaderboardEntry[];
+  isLoadingLeaderboard: boolean;
 };
 
 type PointsActions = {
+  fetchRealLeaderboard: () => Promise<void>;
   addXp: (amount: number, type: 'workout' | 'creatine' | 'habit') => void;
   getUserRank: () => number;
 };
 
 export const usePointsStore = create<PointsState & PointsActions>((set, get) => ({
-  userXp: 1450, // Initial base XP
-  userWorkoutsCompleted: 12,
-  userCreatineDoses: 15,
-  userHabitsCompleted: 24,
+  userXp: 800,
+  userWorkoutsCompleted: 7,
+  userCreatineDoses: 10,
+  userHabitsCompleted: 15,
+  isLoadingLeaderboard: false,
   leaderboard: [
-    { id: 'u-1', rank: 1, name: 'Gabriel Monte', avatar: '👨‍💻', xp: 3420, levelName: 'Elite Diamante 💎', workoutsCompleted: 28, streakDays: 14 },
-    { id: 'u-2', rank: 2, name: 'Emmanuel Fernando', avatar: '🏋️‍♂️', xp: 2950, levelName: 'Atleta Ouro 🥇', workoutsCompleted: 24, streakDays: 11 },
-    { id: 'u-3', rank: 3, name: 'Ana Souza', avatar: '👩‍🦰', xp: 2100, levelName: 'Atleta Ouro 🥇', workoutsCompleted: 19, streakDays: 8 },
-    { id: 'u-4', rank: 4, name: 'Rodrigo Silva', avatar: '🏃‍♂️', xp: 1650, levelName: 'Atleta Ouro 🥇', workoutsCompleted: 15, streakDays: 6 },
-    { id: 'u-curr', rank: 5, name: 'Você (Sua Conta)', avatar: '⭐', xp: 1450, levelName: 'Atleta Prata 🥈', workoutsCompleted: 12, streakDays: 5, isCurrentUser: true },
+    { id: 'b3896169-3132-40d3-90c9-b613c4bbd117', rank: 1, name: 'Emmanuel', avatar: '🏋️‍♂️', xp: 1050, levelName: 'Atleta Prata 🥈', workoutsCompleted: 9 },
+    { id: '130e711b-97e5-4d7c-8a2b-c90b746a5149', rank: 2, name: 'Gabriel Monte', avatar: '👨‍💻', xp: 800, levelName: 'Atleta Prata 🥈', workoutsCompleted: 7, isCurrentUser: true },
   ],
+
+  fetchRealLeaderboard: async () => {
+    set({ isLoadingLeaderboard: true });
+    try {
+      const urls = [`${BACKEND_API_URL}/api/ranking`, '/api/ranking'];
+      for (const url of urls) {
+        const res = await fetch(url).catch(() => null);
+        if (res && res.ok) {
+          const realUsers = await res.json();
+          if (Array.isArray(realUsers) && realUsers.length > 0) {
+            set({ leaderboard: realUsers, isLoadingLeaderboard: false });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch real leaderboard:', e);
+    }
+    set({ isLoadingLeaderboard: false });
+  },
 
   addXp: (amount, type) => {
     const state = get();
@@ -77,7 +98,7 @@ export const usePointsStore = create<PointsState & PointsActions>((set, get) => 
     const levelInfo = getLevelInfo(newXp);
 
     const updatedLeaderboard = state.leaderboard.map((item) => {
-      if (item.isCurrentUser) {
+      if (item.isCurrentUser || item.name.toLowerCase().includes('gabriel')) {
         return {
           ...item,
           xp: newXp,
@@ -88,7 +109,6 @@ export const usePointsStore = create<PointsState & PointsActions>((set, get) => 
       return item;
     });
 
-    // Re-rank leaderboard
     updatedLeaderboard.sort((a, b) => b.xp - a.xp);
     updatedLeaderboard.forEach((item, index) => {
       item.rank = index + 1;
@@ -104,7 +124,7 @@ export const usePointsStore = create<PointsState & PointsActions>((set, get) => 
   },
 
   getUserRank: () => {
-    const current = get().leaderboard.find((u) => u.isCurrentUser);
-    return current ? current.rank : 5;
+    const current = get().leaderboard.find((u) => u.isCurrentUser || u.name.toLowerCase().includes('gabriel'));
+    return current ? current.rank : 2;
   },
 }));

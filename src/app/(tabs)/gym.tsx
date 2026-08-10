@@ -17,11 +17,9 @@ import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
 import { AppToast } from '@/components/atoms/AppToast';
 import { GymWorkoutCard } from '@/components/organisms/GymWorkoutCard';
-import { FitAIChatModal } from '@/components/organisms/FitAIChatModal';
 import { scheduleHabitReminder } from '@/services/notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Spacing, Radius } from '@/constants/theme';
-import type { GeneratedWorkoutSplit } from '@/services/aiWorkoutGenerator';
 
 export type CustomWorkoutSplit = {
   id: string;
@@ -85,6 +83,8 @@ const DEFAULT_ALARMS: CustomAlarm[] = [
   { id: 'a-3', title: 'Hidratação 500ml Água 💧', time: '14:00', enabled: true, category: 'water', repeatDays: 'Todos os dias' },
 ];
 
+const CATEGORY_OPTIONS = ['Push', 'Pull', 'Legs', 'Hipertrofia', 'Cardio', 'Outros'];
+
 const STORAGE_SPLITS_KEY = 'liferoutine_custom_splits_v1';
 const STORAGE_ALARMS_KEY = 'liferoutine_custom_alarms_v1';
 
@@ -95,9 +95,10 @@ export default function GymScreen() {
   // Custom Splits State
   const [splits, setSplits] = useState<CustomWorkoutSplit[]>(DEFAULT_SPLITS);
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [editingSplitId, setEditingSplitId] = useState<string | null>(null);
   const [newSplitName, setNewSplitName] = useState('');
-  const [newSplitCategory, setNewSplitCategory] = useState('');
+  const [selectedCategoryOption, setSelectedCategoryOption] = useState('Push');
+  const [customCategoryText, setCustomCategoryText] = useState('');
   const [newSplitExercises, setNewSplitExercises] = useState('');
 
   // Custom Alarms State
@@ -153,45 +154,68 @@ export default function GymScreen() {
     } catch (e) {}
   };
 
-  const handleAddSplit = async () => {
+  const handleOpenAddSplitModal = () => {
+    setEditingSplitId(null);
+    setNewSplitName('');
+    setSelectedCategoryOption('Push');
+    setCustomCategoryText('');
+    setNewSplitExercises('');
+    setIsSplitModalOpen(true);
+  };
+
+  const handleOpenEditSplitModal = (split: CustomWorkoutSplit) => {
+    setEditingSplitId(split.id);
+    setNewSplitName(split.name);
+    if (CATEGORY_OPTIONS.includes(split.category)) {
+      setSelectedCategoryOption(split.category);
+      setCustomCategoryText('');
+    } else {
+      setSelectedCategoryOption('Outros');
+      setCustomCategoryText(split.category);
+    }
+    setNewSplitExercises(split.exercises.join('\n'));
+    setIsSplitModalOpen(true);
+  };
+
+  const handleSaveSplit = async () => {
     if (!newSplitName.trim()) {
       setToast({ visible: true, title: 'Nome Obrigatório', message: 'Informe o nome do treino.', type: 'warning' });
       return;
     }
+
+    const finalCategory = selectedCategoryOption === 'Outros'
+      ? (customCategoryText.trim() || 'Outros')
+      : selectedCategoryOption;
 
     const exercisesList = newSplitExercises
       .split('\n')
       .map((e) => e.trim())
       .filter(Boolean);
 
-    const newSplit: CustomWorkoutSplit = {
-      id: `s-${Date.now()}`,
-      name: newSplitName.trim(),
-      category: newSplitCategory.trim() || 'Personalizado',
-      exercises: exercisesList.length > 0 ? exercisesList : ['Supino Reto 4x10', 'Desenvolvimento 3x12'],
-    };
+    if (editingSplitId) {
+      // Edit existing split
+      const updated = splits.map((s) => (s.id === editingSplitId ? {
+        ...s,
+        name: newSplitName.trim(),
+        category: finalCategory,
+        exercises: exercisesList.length > 0 ? exercisesList : s.exercises,
+      } : s));
+      await saveSplits(updated);
+      setToast({ visible: true, title: 'Treino Atualizado!', message: 'Sua divisão de treino foi editada com sucesso.', type: 'success' });
+    } else {
+      // Add new split
+      const newSplit: CustomWorkoutSplit = {
+        id: `s-${Date.now()}`,
+        name: newSplitName.trim(),
+        category: finalCategory,
+        exercises: exercisesList.length > 0 ? exercisesList : ['Supino Reto 4x10', 'Desenvolvimento 3x12'],
+      };
+      const updated = [newSplit, ...splits];
+      await saveSplits(updated);
+      setToast({ visible: true, title: 'Treino Criado!', message: 'Sua divisão de treino personalizada foi salva.', type: 'success' });
+    }
 
-    const updated = [newSplit, ...splits];
-    await saveSplits(updated);
-
-    setNewSplitName('');
-    setNewSplitCategory('');
-    setNewSplitExercises('');
     setIsSplitModalOpen(false);
-    setToast({ visible: true, title: 'Treino Criado!', message: 'Sua divisão de treino personalizada foi salva.', type: 'success' });
-  };
-
-  const handleImportAiSplits = async (aiSplits: GeneratedWorkoutSplit[]) => {
-    const formatted: CustomWorkoutSplit[] = aiSplits.map((s) => ({
-      id: s.id,
-      name: s.name,
-      category: s.category,
-      exercises: s.exercises,
-    }));
-
-    const updated = [...formatted, ...splits];
-    await saveSplits(updated);
-    setToast({ visible: true, title: 'Treinos da IA Importados! 🤖', message: 'Os treinos prescritos pela IA foram salvos na sua lista.', type: 'success' });
   };
 
   const handleDeleteSplit = async (id: string) => {
@@ -320,7 +344,7 @@ export default function GymScreen() {
               </AppText>
               <TouchableOpacity
                 style={[styles.btnAdd, { backgroundColor: colors.primary }]}
-                onPress={() => setIsSplitModalOpen(true)}
+                onPress={handleOpenAddSplitModal}
               >
                 <Ionicons name="add" size={16} color="#FFF" />
                 <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 12, marginLeft: 4 }}>
@@ -340,6 +364,13 @@ export default function GymScreen() {
                   <AppText style={{ flex: 1, fontWeight: '700', fontSize: 14, marginLeft: 8 }}>
                     {split.name}
                   </AppText>
+
+                  {/* Edit Split Button */}
+                  <TouchableOpacity onPress={() => handleOpenEditSplitModal(split)} style={{ padding: 4, marginRight: 4 }}>
+                    <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+
+                  {/* Delete Split Button */}
                   <TouchableOpacity onPress={() => handleDeleteSplit(split.id)} style={{ padding: 4 }}>
                     <Ionicons name="trash-outline" size={16} color={colors.danger} />
                   </TouchableOpacity>
@@ -411,7 +442,7 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* CREATE WORKOUT SPLIT MODAL */}
+      {/* CREATE / EDIT WORKOUT SPLIT MODAL */}
       <Modal
         visible={isSplitModalOpen}
         animationType="fade"
@@ -421,7 +452,9 @@ export default function GymScreen() {
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsSplitModalOpen(false)}>
           <TouchableOpacity activeOpacity={1} style={[styles.modalCard, { backgroundColor: isDark ? '#1E293B' : '#FFF', borderColor }]} onPress={(e) => e.stopPropagation?.()}>
             <View style={styles.modalHeader}>
-              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Criar Nova Divisão de Treino</AppText>
+              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>
+                {editingSplitId ? 'Editar Divisão de Treino' : 'Criar Nova Divisão de Treino'}
+              </AppText>
               <TouchableOpacity onPress={() => setIsSplitModalOpen(false)}>
                 <Ionicons name="close" size={20} color={colors.icon} />
               </TouchableOpacity>
@@ -432,18 +465,53 @@ export default function GymScreen() {
               <TextInput style={[styles.input, { color: colors.text }]} value={newSplitName} onChangeText={setNewSplitName} placeholder="Ex: Treino D - Ombros & Abdominal" placeholderTextColor={colors.textTertiary} />
             </View>
 
+            {/* CATEGORY SELECTOR CHIPS WITH "OUTROS" OPTION */}
             <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>CATEGORIA / FOCO</AppText>
-            <View style={[styles.inputBox, { borderColor }]}>
-              <TextInput style={[styles.input, { color: colors.text }]} value={newSplitCategory} onChangeText={setNewSplitCategory} placeholder="Ex: Push / Pull / Legs / Hipertrofia" placeholderTextColor={colors.textTertiary} />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {CATEGORY_OPTIONS.map((cat) => {
+                const isSelected = selectedCategoryOption === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.catChip,
+                      {
+                        backgroundColor: isSelected ? colors.primary : isDark ? '#091E42' : '#F4F5F7',
+                        borderColor: isSelected ? colors.primary : borderColor,
+                      },
+                    ]}
+                    onPress={() => setSelectedCategoryOption(cat)}
+                  >
+                    <AppText style={{ fontSize: 12, fontWeight: isSelected ? '700' : '500', color: isSelected ? '#FFF' : colors.text }}>
+                      {cat}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+
+            {/* Custom Category Input if "Outros" is Selected */}
+            {selectedCategoryOption === 'Outros' && (
+              <View style={[styles.inputBox, { borderColor, marginBottom: 8 }]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  value={customCategoryText}
+                  onChangeText={setCustomCategoryText}
+                  placeholder="Digite sua categoria personalizada..."
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+            )}
 
             <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS (UM POR LINHA)</AppText>
             <View style={[styles.inputBox, { borderColor, height: 90 }]}>
               <TextInput style={[styles.input, { color: colors.text, height: 90, textAlignVertical: 'top' }]} value={newSplitExercises} onChangeText={setNewSplitExercises} placeholder="Supino Reto 4x10&#10;Desenvolvimento Arnold 3x12&#10;Abdominal Infra 4x20" placeholderTextColor={colors.textTertiary} multiline />
             </View>
 
-            <TouchableOpacity style={[styles.btnSubmitModal, { backgroundColor: colors.primary }]} onPress={handleAddSplit}>
-              <AppText style={{ color: '#FFF', fontWeight: '700' }}>Salvar Divisão de Treino</AppText>
+            <TouchableOpacity style={[styles.btnSubmitModal, { backgroundColor: colors.primary }]} onPress={handleSaveSplit}>
+              <AppText style={{ color: '#FFF', fontWeight: '700' }}>
+                {editingSplitId ? 'Atualizar Treino' : 'Salvar Divisão de Treino'}
+              </AppText>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -499,11 +567,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
   tabBarRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 42, borderRadius: 8, borderWidth: 1 },
-  aiBanner: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, marginBottom: 14 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   btnAdd: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   splitHeaderRow: { flexDirection: 'row', alignItems: 'center' },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
