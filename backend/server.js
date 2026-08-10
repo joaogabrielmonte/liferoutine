@@ -227,6 +227,74 @@ app.post('/api/sync', async (req, res) => {
   }
 });
 
+// In-memory support tickets backup
+let backendTickets = [
+  {
+    id: 't-demo-1',
+    userName: 'Gabriel Monte',
+    userEmail: 'gabriel@liferoutine.com',
+    subject: 'Sincronização do Banco de Dados PostgreSQL',
+    message: 'Solicito verificação da conexão de backup entre a VPS Oracle e o aplicativo.',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+// Support Tickets Endpoints for Mobile & Web Admin Sync
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const dbRes = await pool.query('SELECT * FROM support_tickets ORDER BY created_at DESC').catch(() => null);
+    if (dbRes && dbRes.rows) {
+      const tickets = dbRes.rows.map((row) => ({
+        id: row.id,
+        userName: row.user_name || row.userName || 'Usuário',
+        userEmail: row.user_email || row.userEmail || 'usuario@liferoutine.com',
+        subject: row.subject,
+        message: row.message,
+        status: row.status || 'open',
+        createdAt: row.created_at || row.createdAt,
+      }));
+      return res.json(tickets);
+    }
+  } catch (e) {}
+  res.json(backendTickets);
+});
+
+app.post('/api/tickets', async (req, res) => {
+  const { id, userName, userEmail, subject, message, status, createdAt } = req.body;
+  const newTicket = {
+    id: id || `t-${Date.now()}`,
+    userName: userName || 'Usuário Mobile',
+    userEmail: userEmail || 'usuario@liferoutine.com',
+    subject: (subject || '').trim(),
+    message: (message || '').trim(),
+    status: status || 'open',
+    createdAt: createdAt || new Date().toISOString(),
+  };
+
+  backendTickets = [newTicket, ...backendTickets.filter((t) => t.id !== newTicket.id)];
+
+  try {
+    await pool.query(
+      `INSERT INTO support_tickets (id, user_name, user_email, subject, message, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET subject = EXCLUDED.subject, message = EXCLUDED.message`,
+      [newTicket.id, newTicket.userName, newTicket.userEmail, newTicket.subject, newTicket.message, newTicket.status, newTicket.createdAt]
+    ).catch(() => {});
+  } catch (e) {}
+
+  res.json({ success: true, tickets: backendTickets });
+});
+
+app.put('/api/tickets', async (req, res) => {
+  const { id, status } = req.body;
+  backendTickets = backendTickets.map((t) => (t.id === id ? { ...t, status } : t));
+  try {
+    await pool.query('UPDATE support_tickets SET status = $1 WHERE id = $2', [status, id]).catch(() => {});
+  } catch (e) {}
+  res.json({ success: true, tickets: backendTickets });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 LifeRoutine Backend API rodando na porta ${PORT}`);
 });

@@ -1,6 +1,7 @@
 import { Platform, DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { getUserProfile } from '@/services/storage';
+import { BACKEND_API_URL } from '@/services/supabase';
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved';
 
@@ -14,7 +15,7 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v9';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v10';
 
 // Global memory cache to retain all created tickets instantly in JS runtime
 let globalTicketsMemory: SupportTicket[] = [
@@ -29,8 +30,15 @@ let globalTicketsMemory: SupportTicket[] = [
   },
 ];
 
+const getDevApiUrls = () => [
+  `${BACKEND_API_URL}/api/tickets`,
+  'http://192.168.1.6:8081/api/tickets',
+  'http://localhost:8081/api/tickets',
+  '/api/tickets',
+];
+
 /**
- * Fast, 100% non-blocking local fetch for support tickets (instant 0ms response)
+ * Fetch all support tickets across remote PostgreSQL API, local storage and memory
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   const ticketMap = new Map<string, SupportTicket>();
@@ -64,6 +72,19 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     } catch (e) {}
   }
 
+  // 4. Fetch remote tickets from Oracle VPS PostgreSQL API server in background
+  for (const url of getDevApiUrls()) {
+    try {
+      const res = await fetch(url, { method: 'GET' }).catch(() => null);
+      if (res && res.ok) {
+        const apiTickets = await res.json();
+        if (Array.isArray(apiTickets)) {
+          apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
+        }
+      }
+    } catch (e) {}
+  }
+
   const mergedList = Array.from(ticketMap.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
@@ -73,7 +94,7 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
 }
 
 /**
- * Create new support ticket from mobile app or web instantly (0ms delay)
+ * Create new support ticket from mobile app or web instantly
  */
 export async function createSupportTicket(
   subject: string,
@@ -116,19 +137,15 @@ export async function createSupportTicket(
     // Emit event for UI reactivity
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
-    // Non-blocking fire-and-forget background sync with 1s timeout
+    // Asynchronously send ticket to Oracle VPS Server PostgreSQL API endpoints
     setTimeout(() => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1000);
-
-      fetch('/api/tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTicket),
-        signal: controller.signal,
-      })
-        .catch(() => {})
-        .finally(() => clearTimeout(timeoutId));
+      for (const url of getDevApiUrls()) {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTicket),
+        }).catch(() => {});
+      }
     }, 10);
 
     return {
@@ -170,6 +187,17 @@ export async function updateTicketStatus(
         await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
       } catch (e) {}
     }
+
+    // Async PUT to Oracle VPS Server API
+    setTimeout(() => {
+      for (const url of getDevApiUrls()) {
+        fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: ticketId, status: newStatus }),
+        }).catch(() => {});
+      }
+    }, 10);
 
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
     return updated;
