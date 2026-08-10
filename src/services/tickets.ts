@@ -15,9 +15,9 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v11';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v12';
 
-// Initial tickets in memory so Database Explorer always displays active support ticket data
+// In-memory ticket cache
 let globalTicketsMemory: SupportTicket[] = [
   {
     id: 't-1001',
@@ -47,15 +47,32 @@ const getDevApiUrls = () => [
 ];
 
 /**
- * Fetch all support tickets across PostgreSQL API, local storage, and memory
+ * Fetch all support tickets across remote PostgreSQL VPS API, local storage, and memory
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   const ticketMap = new Map<string, SupportTicket>();
 
-  // 1. Add memory tickets first
-  globalTicketsMemory.forEach((t) => ticketMap.set(t.id, t));
+  // 1. Fetch live remote tickets from Oracle VPS Server PostgreSQL API first
+  for (const url of getDevApiUrls()) {
+    try {
+      const res = await fetch(url, { method: 'GET' }).catch(() => null);
+      if (res && res.ok) {
+        const apiTickets = await res.json();
+        if (Array.isArray(apiTickets)) {
+          apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
+        }
+      }
+    } catch (e) {}
+  }
 
-  // 2. Read from web localStorage
+  // 2. Add in-memory tickets
+  globalTicketsMemory.forEach((t) => {
+    if (!ticketMap.has(t.id)) {
+      ticketMap.set(t.id, t);
+    }
+  });
+
+  // 3. Read from web localStorage
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const localJson = window.localStorage.getItem(TICKETS_STORAGE_KEY);
@@ -68,7 +85,7 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     } catch (e) {}
   }
 
-  // 3. Read from mobile SecureStore
+  // 4. Read from mobile SecureStore
   if (Platform.OS !== 'web') {
     try {
       const secureJson = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
@@ -76,19 +93,6 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
         const parsed = JSON.parse(secureJson);
         if (Array.isArray(parsed)) {
           parsed.forEach((t) => ticketMap.set(t.id, t));
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 4. Background fetch from Oracle VPS Server API
-  for (const url of getDevApiUrls()) {
-    try {
-      const res = await fetch(url, { method: 'GET' }).catch(() => null);
-      if (res && res.ok) {
-        const apiTickets = await res.json();
-        if (Array.isArray(apiTickets)) {
-          apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
         }
       }
     } catch (e) {}
@@ -116,7 +120,7 @@ export async function createSupportTicket(
 
     const newTicket: SupportTicket = {
       id: `t-${Date.now()}`,
-      userName: userName || profile.name || 'Usuário Mobile (Android)',
+      userName: userName || profile.name || 'Usuário Mobile',
       userEmail: userEmail || 'usuario.mobile@liferoutine.com',
       subject: subject.trim(),
       message: message.trim(),
@@ -143,10 +147,10 @@ export async function createSupportTicket(
       } catch (e) {}
     }
 
-    // Fire cross-platform event
+    // Emit event for UI reactivity
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
-    // Async POST to Oracle VPS API endpoints
+    // Asynchronously send ticket to Oracle VPS Server PostgreSQL API endpoints
     setTimeout(() => {
       for (const url of getDevApiUrls()) {
         fetch(url, {
