@@ -103,7 +103,7 @@ export default function GymScreen() {
   const [selectedCategoryOption, setSelectedCategoryOption] = useState('Push');
   const [customCategoryText, setCustomCategoryText] = useState('');
 
-  // Interactive '+' Exercise List Items & Reordering inside Edit Modal
+  // Interactive '+' Exercise List Items
   const [exerciseInputText, setExerciseInputText] = useState('');
   const [exerciseList, setExerciseList] = useState<string[]>([]);
 
@@ -219,28 +219,6 @@ export default function GymScreen() {
 
   const handleRemoveExerciseFromList = (index: number) => {
     setExerciseList((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleMoveExerciseUp = (index: number) => {
-    if (index === 0) return;
-    setExerciseList((prev) => {
-      const updated = [...prev];
-      const temp = updated[index];
-      updated[index] = updated[index - 1];
-      updated[index - 1] = temp;
-      return updated;
-    });
-  };
-
-  const handleMoveExerciseDown = (index: number) => {
-    setExerciseList((prev) => {
-      if (index >= prev.length - 1) return prev;
-      const updated = [...prev];
-      const temp = updated[index];
-      updated[index] = updated[index + 1];
-      updated[index + 1] = temp;
-      return updated;
-    });
   };
 
   const handleSaveSplit = async () => {
@@ -577,15 +555,20 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* CREATE / EDIT WORKOUT SPLIT MODAL WITH REORDERABLE EXERCISE LIST */}
+      {/* CREATE / EDIT WORKOUT SPLIT MODAL (100% UNIMPEDED NATIVE SCROLLBAR) */}
       <Modal
         visible={isSplitModalOpen}
         animationType="fade"
         transparent
         onRequestClose={() => setIsSplitModalOpen(false)}
       >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsSplitModalOpen(false)}>
-          <TouchableOpacity activeOpacity={1} style={[styles.modalCard, { backgroundColor: isDark ? '#1E293B' : '#FFF', borderColor }]} onPress={(e) => e.stopPropagation?.()}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsSplitModalOpen(false)}
+          />
+          <View style={[styles.modalCard, { backgroundColor: isDark ? '#1E293B' : '#FFF', borderColor }]}>
             <View style={styles.modalHeader}>
               <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>
                 {editingSplitId ? 'Editar Divisão de Treino' : 'Criar Nova Divisão de Treino'}
@@ -639,7 +622,7 @@ export default function GymScreen() {
             )}
 
             {/* INTERACTIVE EXERCISE ADD INPUT (+) */}
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS DO TREINO (ADICIONE E REORDENE)</AppText>
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS DO TREINO</AppText>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
               <View style={[styles.inputBox, { borderColor, flex: 1, marginBottom: 0 }]}>
                 <TextInput
@@ -659,9 +642,9 @@ export default function GymScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Added Exercise List Container with Persistent Visible Native Scrollbar */}
+            {/* 100% UNIMPEDED EXERCISE SCROLLVIEW WITH VISIBLE NATIVE SCROLLBAR */}
             <ScrollView
-              style={{ maxHeight: 220, minHeight: 100, marginBottom: 14 }}
+              style={{ maxHeight: 240, minHeight: 120, marginBottom: 14 }}
               nestedScrollEnabled={true}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
@@ -703,8 +686,8 @@ export default function GymScreen() {
                 {editingSplitId ? 'Atualizar Treino' : 'Salvar Divisão de Treino'}
               </AppText>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* CREATE ALARM MODAL */}
@@ -714,8 +697,13 @@ export default function GymScreen() {
         transparent
         onRequestClose={() => setIsAlarmModalOpen(false)}
       >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsAlarmModalOpen(false)}>
-          <TouchableOpacity activeOpacity={1} style={[styles.modalCard, { backgroundColor: isDark ? '#1E293B' : '#FFF', borderColor }]} onPress={(e) => e.stopPropagation?.()}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsAlarmModalOpen(false)}
+          />
+          <View style={[styles.modalCard, { backgroundColor: isDark ? '#1E293B' : '#FFF', borderColor }]}>
             <View style={styles.modalHeader}>
               <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Criar Novo Alarme</AppText>
               <TouchableOpacity onPress={() => setIsAlarmModalOpen(false)}>
@@ -736,8 +724,8 @@ export default function GymScreen() {
             <TouchableOpacity style={[styles.btnSubmitModal, { backgroundColor: colors.primary }]} onPress={handleAddAlarm}>
               <AppText style={{ color: '#FFF', fontWeight: '700' }}>Agendar Alarme</AppText>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <AppToast
@@ -769,8 +757,9 @@ const styles = StyleSheet.create({
   emptyExerciseNotice: { padding: 12, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed' },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalCard: { width: '100%', maxWidth: 380, borderRadius: 12, padding: 16, borderWidth: 1 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject },
+  modalCard: { width: '100%', maxWidth: 400, borderRadius: 14, padding: 16, borderWidth: 1 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   inputLabel: { marginTop: 8, marginBottom: 4, fontSize: 11, fontWeight: '700' },
   inputBox: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, marginBottom: 8 },
