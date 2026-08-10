@@ -103,7 +103,7 @@ export default function GymScreen() {
   const [selectedCategoryOption, setSelectedCategoryOption] = useState('Push');
   const [customCategoryText, setCustomCategoryText] = useState('');
 
-  // Interactive '+' Exercise List Items
+  // Interactive '+' Exercise List Items & Reordering inside Edit Modal
   const [exerciseInputText, setExerciseInputText] = useState('');
   const [exerciseList, setExerciseList] = useState<string[]>([]);
 
@@ -219,6 +219,28 @@ export default function GymScreen() {
 
   const handleRemoveExerciseFromList = (index: number) => {
     setExerciseList((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleMoveExerciseUp = (index: number) => {
+    if (index === 0) return;
+    setExerciseList((prev) => {
+      const updated = [...prev];
+      const temp = updated[index];
+      updated[index] = updated[index - 1];
+      updated[index - 1] = temp;
+      return updated;
+    });
+  };
+
+  const handleMoveExerciseDown = (index: number) => {
+    setExerciseList((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const updated = [...prev];
+      const temp = updated[index];
+      updated[index] = updated[index + 1];
+      updated[index + 1] = temp;
+      return updated;
+    });
   };
 
   const handleSaveSplit = async () => {
@@ -484,46 +506,16 @@ export default function GymScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Horizontal Scrollable Carousel for Exercises */}
-                  <View style={{ marginTop: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <AppText variant="caption" color="textSecondary" style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
-                        EXERCÍCIOS DA FICHA ({split.exercises.length})
-                      </AppText>
-                      <AppText variant="caption" style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>
-                        Deslize pro lado ➔
-                      </AppText>
-                    </View>
-
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
-                      nestedScrollEnabled
-                    >
-                      {split.exercises.map((ex, idx) => (
-                        <View
-                          key={idx}
-                          style={[
-                            styles.exerciseCardBadge,
-                            {
-                              backgroundColor: isDark ? '#091E42' : '#F4F5F7',
-                              borderColor,
-                            },
-                          ]}
-                        >
-                          <View style={[styles.exerciseNumberPill, { backgroundColor: colors.primaryLight }]}>
-                            <AppText style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>
-                              #{idx + 1}
-                            </AppText>
-                          </View>
-                          <MaterialCommunityIcons name="dumbbell" size={14} color="#FF5630" style={{ marginHorizontal: 4 }} />
-                          <AppText style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
-                            {ex}
-                          </AppText>
-                        </View>
-                      ))}
-                    </ScrollView>
+                  {/* Clean Vertical Exercise List */}
+                  <View style={{ marginTop: 10, gap: 4 }}>
+                    {split.exercises.map((ex, idx) => (
+                      <View key={idx} style={styles.exerciseRow}>
+                        <Ionicons name="checkmark-circle-outline" size={14} color="#00875A" />
+                        <AppText style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 6 }}>
+                          {ex}
+                        </AppText>
+                      </View>
+                    ))}
                   </View>
                 </AppCard>
               </TouchableOpacity>
@@ -585,7 +577,7 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* CREATE / EDIT WORKOUT SPLIT MODAL */}
+      {/* CREATE / EDIT WORKOUT SPLIT MODAL WITH REORDERABLE EXERCISE LIST */}
       <Modal
         visible={isSplitModalOpen}
         animationType="fade"
@@ -647,7 +639,7 @@ export default function GymScreen() {
             )}
 
             {/* INTERACTIVE EXERCISE ADD INPUT (+) */}
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS DO TREINO</AppText>
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS DO TREINO (ADICIONE E REORDENE)</AppText>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
               <View style={[styles.inputBox, { borderColor, flex: 1, marginBottom: 0 }]}>
                 <TextInput
@@ -667,15 +659,39 @@ export default function GymScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Added Exercise List Chips / Rows */}
-            <ScrollView style={{ maxHeight: 120, marginBottom: 12 }}>
-              <View style={{ gap: 4 }}>
+            {/* Added Exercise List with Reorder Controls (▲ / ▼) */}
+            <ScrollView style={{ maxHeight: 150, marginBottom: 12 }}>
+              <View style={{ gap: 6 }}>
                 {exerciseList.map((ex, idx) => (
-                  <View key={idx} style={[styles.exerciseListItem, { borderColor }]}>
-                    <Ionicons name="barbell-outline" size={14} color={colors.primary} />
-                    <AppText style={{ flex: 1, fontSize: 12, marginLeft: 6 }}>{ex}</AppText>
+                  <View key={idx} style={[styles.exerciseListItem, { borderColor, backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+                    {/* Reorder Up/Down Actions */}
+                    <View style={{ flexDirection: 'row', gap: 2, marginRight: 6 }}>
+                      <TouchableOpacity
+                        onPress={() => handleMoveExerciseUp(idx)}
+                        disabled={idx === 0}
+                        style={{ opacity: idx === 0 ? 0.3 : 1, padding: 2 }}
+                      >
+                        <Ionicons name="chevron-up" size={16} color={colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleMoveExerciseDown(idx)}
+                        disabled={idx === exerciseList.length - 1}
+                        style={{ opacity: idx === exerciseList.length - 1 ? 0.3 : 1, padding: 2 }}
+                      >
+                        <Ionicons name="chevron-down" size={16} color={colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+
+                    <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginRight: 4 }}>
+                      #{idx + 1}
+                    </AppText>
+
+                    <AppText style={{ flex: 1, fontSize: 12, fontWeight: '500', color: colors.text }}>
+                      {ex}
+                    </AppText>
+
                     <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 2 }}>
-                      <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
+                      <Ionicons name="close-circle" size={18} color={colors.danger} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -748,7 +764,7 @@ const styles = StyleSheet.create({
   catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   btnAddExercise: { width: 42, height: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  exerciseListItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, borderWidth: 1 },
+  exerciseListItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 },
@@ -758,17 +774,4 @@ const styles = StyleSheet.create({
   inputBox: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, marginBottom: 8 },
   input: { fontSize: 13, paddingVertical: 8 },
   btnSubmitModal: { height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  exerciseCardBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  exerciseNumberPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
 });
