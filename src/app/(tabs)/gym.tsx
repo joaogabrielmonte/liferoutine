@@ -8,7 +8,6 @@ import {
   TextInput,
   Modal,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,15 +17,17 @@ import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
 import { AppToast } from '@/components/atoms/AppToast';
 import { GymWorkoutCard } from '@/components/organisms/GymWorkoutCard';
-import { scheduleHabitReminder, cancelAllNotifications } from '@/services/notifications';
+import { FitAIChatModal } from '@/components/organisms/FitAIChatModal';
+import { scheduleHabitReminder } from '@/services/notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Spacing, Radius } from '@/constants/theme';
+import type { GeneratedWorkoutSplit } from '@/services/aiWorkoutGenerator';
 
 export type CustomWorkoutSplit = {
   id: string;
   name: string; // e.g. "Treino A - Peito & Tríceps"
   category: string;
-  exercises: string[]; // e.g. ["Supino Reto 4x10", "Supino Inclinado 3x12", "Tríceps Testa 4x12"]
+  exercises: string[];
   isCompletedToday?: boolean;
 };
 
@@ -36,7 +37,7 @@ export type CustomAlarm = {
   time: string; // "17:00"
   enabled: boolean;
   category: 'workout' | 'creatine' | 'water' | 'meal' | 'custom';
-  repeatDays: string; // "Todos os dias" | "Seg a Sex"
+  repeatDays: string;
 };
 
 const DEFAULT_SPLITS: CustomWorkoutSplit[] = [
@@ -94,6 +95,7 @@ export default function GymScreen() {
   // Custom Splits State
   const [splits, setSplits] = useState<CustomWorkoutSplit[]>(DEFAULT_SPLITS);
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [newSplitName, setNewSplitName] = useState('');
   const [newSplitCategory, setNewSplitCategory] = useState('');
   const [newSplitExercises, setNewSplitExercises] = useState('');
@@ -177,6 +179,19 @@ export default function GymScreen() {
     setNewSplitExercises('');
     setIsSplitModalOpen(false);
     setToast({ visible: true, title: 'Treino Criado!', message: 'Sua divisão de treino personalizada foi salva.', type: 'success' });
+  };
+
+  const handleImportAiSplits = async (aiSplits: GeneratedWorkoutSplit[]) => {
+    const formatted: CustomWorkoutSplit[] = aiSplits.map((s) => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      exercises: s.exercises,
+    }));
+
+    const updated = [...formatted, ...splits];
+    await saveSplits(updated);
+    setToast({ visible: true, title: 'Treinos da IA Importados! 🤖', message: 'Os treinos prescritos pela IA foram salvos na sua lista.', type: 'success' });
   };
 
   const handleDeleteSplit = async (id: string) => {
@@ -271,7 +286,7 @@ export default function GymScreen() {
               color={activeTab === 'splits' ? '#FFFFFF' : colors.textSecondary}
             />
             <AppText style={{ color: activeTab === 'splits' ? '#FFF' : colors.textSecondary, fontWeight: '700', fontSize: 13, marginLeft: 6 }}>
-              Minhas Divisões de Treino
+              Divisões de Treino
             </AppText>
           </TouchableOpacity>
 
@@ -299,9 +314,27 @@ export default function GymScreen() {
         {/* TAB 1: WORKOUT SPLITS */}
         {activeTab === 'splits' && (
           <Animated.View entering={FadeInDown.duration(300)}>
+            {/* AI Personal Assistant Banner */}
+            <TouchableOpacity
+              style={[styles.aiBanner, { backgroundColor: '#8B5CF6' }]}
+              onPress={() => setIsAiModalOpen(true)}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="robot" size={24} color="#FFF" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <AppText style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>
+                  Ficha de Treino com Personal IA 🤖
+                </AppText>
+                <AppText style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
+                  Gere o treino ideal para seu objetivo e monte suas fichas automaticamente
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#FFF" />
+            </TouchableOpacity>
+
             <View style={styles.sectionHeader}>
               <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>
-                Divisões de Treino Personalizadas
+                Suas Divisões de Treino
               </AppText>
               <TouchableOpacity
                 style={[styles.btnAdd, { backgroundColor: colors.primary }]}
@@ -396,6 +429,13 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
+      {/* FIT AI CHAT ASSISTANT MODAL */}
+      <FitAIChatModal
+        visible={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onImportSplits={handleImportAiSplits}
+      />
+
       {/* CREATE WORKOUT SPLIT MODAL */}
       <Modal
         visible={isSplitModalOpen}
@@ -482,8 +522,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
-  tabBarRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  tabBarRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 42, borderRadius: 8, borderWidth: 1 },
+  aiBanner: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, marginBottom: 14 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   btnAdd: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   splitHeaderRow: { flexDirection: 'row', alignItems: 'center' },
