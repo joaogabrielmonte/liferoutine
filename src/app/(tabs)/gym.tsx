@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ import { Spacing, Radius } from '@/constants/theme';
 
 export type CustomWorkoutSplit = {
   id: string;
-  name: string; // e.g. "Treino A - Peito & Tríceps"
+  name: string;
   category: string;
   exercises: string[];
   isCompletedToday?: boolean;
@@ -32,7 +33,7 @@ export type CustomWorkoutSplit = {
 export type CustomAlarm = {
   id: string;
   title: string;
-  time: string; // "17:00"
+  time: string;
   enabled: boolean;
   category: 'workout' | 'creatine' | 'water' | 'meal' | 'custom';
   repeatDays: string;
@@ -99,7 +100,10 @@ export default function GymScreen() {
   const [newSplitName, setNewSplitName] = useState('');
   const [selectedCategoryOption, setSelectedCategoryOption] = useState('Push');
   const [customCategoryText, setCustomCategoryText] = useState('');
-  const [newSplitExercises, setNewSplitExercises] = useState('');
+
+  // Interactive '+' Exercise List Items
+  const [exerciseInputText, setExerciseInputText] = useState('');
+  const [exerciseList, setExerciseList] = useState<string[]>([]);
 
   // Custom Alarms State
   const [alarms, setAlarms] = useState<CustomAlarm[]>(DEFAULT_ALARMS);
@@ -139,6 +143,7 @@ export default function GymScreen() {
       } else if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync(STORAGE_SPLITS_KEY, json);
       }
+      DeviceEventEmitter.emit('liferoutine_splits_updated');
     } catch (e) {}
   };
 
@@ -159,7 +164,8 @@ export default function GymScreen() {
     setNewSplitName('');
     setSelectedCategoryOption('Push');
     setCustomCategoryText('');
-    setNewSplitExercises('');
+    setExerciseInputText('');
+    setExerciseList([]);
     setIsSplitModalOpen(true);
   };
 
@@ -173,8 +179,19 @@ export default function GymScreen() {
       setSelectedCategoryOption('Outros');
       setCustomCategoryText(split.category);
     }
-    setNewSplitExercises(split.exercises.join('\n'));
+    setExerciseInputText('');
+    setExerciseList(split.exercises || []);
     setIsSplitModalOpen(true);
+  };
+
+  const handleAddExerciseToList = () => {
+    if (!exerciseInputText.trim()) return;
+    setExerciseList((prev) => [...prev, exerciseInputText.trim()]);
+    setExerciseInputText('');
+  };
+
+  const handleRemoveExerciseFromList = (index: number) => {
+    setExerciseList((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSaveSplit = async () => {
@@ -187,18 +204,13 @@ export default function GymScreen() {
       ? (customCategoryText.trim() || 'Outros')
       : selectedCategoryOption;
 
-    const exercisesList = newSplitExercises
-      .split('\n')
-      .map((e) => e.trim())
-      .filter(Boolean);
-
     if (editingSplitId) {
       // Edit existing split
       const updated = splits.map((s) => (s.id === editingSplitId ? {
         ...s,
         name: newSplitName.trim(),
         category: finalCategory,
-        exercises: exercisesList.length > 0 ? exercisesList : s.exercises,
+        exercises: exerciseList.length > 0 ? exerciseList : s.exercises,
       } : s));
       await saveSplits(updated);
       setToast({ visible: true, title: 'Treino Atualizado!', message: 'Sua divisão de treino foi editada com sucesso.', type: 'success' });
@@ -208,7 +220,7 @@ export default function GymScreen() {
         id: `s-${Date.now()}`,
         name: newSplitName.trim(),
         category: finalCategory,
-        exercises: exercisesList.length > 0 ? exercisesList : ['Supino Reto 4x10', 'Desenvolvimento 3x12'],
+        exercises: exerciseList.length > 0 ? exerciseList : ['Supino Reto 4x10', 'Desenvolvimento 3x12'],
       };
       const updated = [newSplit, ...splits];
       await saveSplits(updated);
@@ -442,7 +454,7 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* CREATE / EDIT WORKOUT SPLIT MODAL */}
+      {/* CREATE / EDIT WORKOUT SPLIT MODAL WITH INTERACTIVE '+' BUTTON */}
       <Modal
         visible={isSplitModalOpen}
         animationType="fade"
@@ -503,10 +515,41 @@ export default function GymScreen() {
               </View>
             )}
 
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS (UM POR LINHA)</AppText>
-            <View style={[styles.inputBox, { borderColor, height: 90 }]}>
-              <TextInput style={[styles.input, { color: colors.text, height: 90, textAlignVertical: 'top' }]} value={newSplitExercises} onChangeText={setNewSplitExercises} placeholder="Supino Reto 4x10&#10;Desenvolvimento Arnold 3x12&#10;Abdominal Infra 4x20" placeholderTextColor={colors.textTertiary} multiline />
+            {/* INTERACTIVE EXERCISE ADD INPUT (+) */}
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>EXERCÍCIOS DO TREINO</AppText>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+              <View style={[styles.inputBox, { borderColor, flex: 1, marginBottom: 0 }]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  value={exerciseInputText}
+                  onChangeText={setExerciseInputText}
+                  placeholder="Ex: Supino Reto 4x10..."
+                  placeholderTextColor={colors.textTertiary}
+                  onSubmitEditing={handleAddExerciseToList}
+                />
+              </View>
+              <TouchableOpacity
+                style={[styles.btnAddExercise, { backgroundColor: colors.primary }]}
+                onPress={handleAddExerciseToList}
+              >
+                <Ionicons name="add" size={20} color="#FFF" />
+              </TouchableOpacity>
             </View>
+
+            {/* Added Exercise List Chips / Rows */}
+            <ScrollView style={{ maxHeight: 120, marginBottom: 12 }}>
+              <View style={{ gap: 4 }}>
+                {exerciseList.map((ex, idx) => (
+                  <View key={idx} style={[styles.exerciseListItem, { borderColor }]}>
+                    <Ionicons name="barbell-outline" size={14} color={colors.primary} />
+                    <AppText style={{ flex: 1, fontSize: 12, marginLeft: 6 }}>{ex}</AppText>
+                    <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 2 }}>
+                      <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
 
             <TouchableOpacity style={[styles.btnSubmitModal, { backgroundColor: colors.primary }]} onPress={handleSaveSplit}>
               <AppText style={{ color: '#FFF', fontWeight: '700' }}>
@@ -573,6 +616,8 @@ const styles = StyleSheet.create({
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  btnAddExercise: { width: 42, height: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  exerciseListItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, borderWidth: 1 },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 },

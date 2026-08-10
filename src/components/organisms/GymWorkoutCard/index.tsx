@@ -7,18 +7,32 @@ import {
   Switch,
   Modal,
   TextInput,
+  Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { AppText } from '@/components/atoms/AppText';
 import { AppCard } from '@/components/atoms/AppCard';
-import {
-  useWorkoutStore,
-  MUSCLE_GROUPS,
-  type MuscleGroup,
-} from '@/stores/useWorkoutStore';
+import { useWorkoutStore } from '@/stores/useWorkoutStore';
+import * as SecureStore from 'expo-secure-store';
 import { Spacing, Radius } from '@/constants/theme';
+
+const STORAGE_SPLITS_KEY = 'liferoutine_custom_splits_v1';
+
+type UserSplitItem = {
+  id: string;
+  name: string;
+  category: string;
+  exercises: string[];
+};
+
+const DEFAULT_USER_SPLITS: UserSplitItem[] = [
+  { id: 's-1', name: 'Treino A - Peito, Ombros & Tríceps', category: 'Push', exercises: [] },
+  { id: 's-2', name: 'Treino B - Costas, Trapézio & Bíceps', category: 'Pull', exercises: [] },
+  { id: 's-3', name: 'Treino C - Pernas, Quadríceps & Panturrilhas', category: 'Legs', exercises: [] },
+];
 
 export function GymWorkoutCard() {
   const { colors, isDark } = useTheme();
@@ -40,13 +54,47 @@ export function GymWorkoutCard() {
     toggleCreatineReminder,
   } = useWorkoutStore();
 
+  const [userSplits, setUserSplits] = useState<string[]>([]);
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [tempWorkoutTime, setTempWorkoutTime] = useState(workoutTime);
   const [tempCreatineTime, setTempCreatineTime] = useState(creatineTime);
 
   useEffect(() => {
     loadStore();
+    loadCustomUserSplits();
+
+    const sub = DeviceEventEmitter.addListener('liferoutine_splits_updated', () => {
+      loadCustomUserSplits();
+    });
+    return () => sub.remove();
   }, []);
+
+  const loadCustomUserSplits = async () => {
+    try {
+      let json: string | null = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        json = localStorage.getItem(STORAGE_SPLITS_KEY);
+      } else if (Platform.OS !== 'web') {
+        json = await SecureStore.getItemAsync(STORAGE_SPLITS_KEY);
+      }
+
+      if (json) {
+        const parsed: UserSplitItem[] = JSON.parse(json);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const names = parsed.map((s) => s.name);
+          setUserSplits([...names, 'Descanso Ativo (Off)']);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setUserSplits([
+      'Treino A - Peito, Ombros & Tríceps',
+      'Treino B - Costas, Trapézio & Bíceps',
+      'Treino C - Pernas, Quadríceps & Panturrilhas',
+      'Descanso Ativo (Off)',
+    ]);
+  };
 
   const cardBg = isDark ? '#172B4D' : '#FFFFFF';
   const borderColor = isDark ? '#253858' : '#DFE1E6';
@@ -70,7 +118,7 @@ export function GymWorkoutCard() {
               Academia & Treino do Dia
             </AppText>
             <AppText variant="caption" color="textSecondary" style={{ fontSize: 12 }}>
-              Selecione o agrupamento, marque o treino e a creatina
+              Seus treinos criados em Minhas Divisões
             </AppText>
           </View>
           <TouchableOpacity
@@ -85,17 +133,17 @@ export function GymWorkoutCard() {
           </TouchableOpacity>
         </View>
 
-        {/* Agrupamento Muscular Selector */}
+        {/* Dynamic User Custom Split Selector */}
         <AppText variant="caption" color="textSecondary" style={styles.sectionLabel}>
-          AGRUPAMENTO MUSCULAR DO DIA
+          SUAS DIVISÕES DE TREINO (SELEÇÃO DO DIA)
         </AppText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            {MUSCLE_GROUPS.map((group) => {
-              const isSelected = todayMuscleGroup === group;
+            {userSplits.map((groupName) => {
+              const isSelected = todayMuscleGroup === groupName;
               return (
                 <TouchableOpacity
-                  key={group}
+                  key={groupName}
                   style={[
                     styles.chip,
                     {
@@ -103,7 +151,7 @@ export function GymWorkoutCard() {
                       borderColor: isSelected ? '#FF5630' : borderColor,
                     },
                   ]}
-                  onPress={() => setTodayMuscleGroup(group)}
+                  onPress={() => setTodayMuscleGroup(groupName as any)}
                   activeOpacity={0.8}
                 >
                   <AppText
@@ -113,7 +161,7 @@ export function GymWorkoutCard() {
                       color: isSelected ? '#FFFFFF' : colors.text,
                     }}
                   >
-                    {group}
+                    {groupName}
                   </AppText>
                 </TouchableOpacity>
               );
@@ -141,8 +189,8 @@ export function GymWorkoutCard() {
             />
             <AppText style={styles.actionBtnText}>
               {isWorkoutCompletedToday
-                ? `Treino de ${todayMuscleGroup} Concluído! 🔥`
-                : `Marcar Treino de ${todayMuscleGroup} Concluído`}
+                ? `${todayMuscleGroup} Concluído! 🔥`
+                : `Marcar ${todayMuscleGroup} Concluído`}
             </AppText>
           </TouchableOpacity>
 
