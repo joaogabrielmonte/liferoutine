@@ -19,6 +19,7 @@ import { AppCard } from '@/components/atoms/AppCard';
 import { AppButton } from '@/components/atoms/AppButton';
 import { ProgressRing } from '@/components/molecules/ProgressRing';
 import { HeatmapCalendar } from '@/components/molecules/HeatmapCalendar';
+import { PointsLeaderboardSection } from '@/components/organisms/PointsLeaderboardSection';
 import { Spacing, Radius, Shadow } from '@/constants/theme';
 import { HABIT_CATEGORIES, type HabitCategory } from '@/types/habit';
 
@@ -286,6 +287,9 @@ export default function StatsScreen() {
             />
           </AppCard>
         </Animated.View>
+
+        {/* Sistema de Pontos & Ranking Global de Usuários */}
+        <PointsLeaderboardSection />
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
