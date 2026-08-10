@@ -659,13 +659,15 @@ export default function GymScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Added Exercise List Container (Expanded height & fixed smooth scroll) */}
+            {/* Added Exercise List Container with Persistent Visible Native Scrollbar */}
             <ScrollView
-              style={{ maxHeight: 260, minHeight: 120, marginBottom: 14 }}
+              style={{ maxHeight: 220, minHeight: 100, marginBottom: 14 }}
               nestedScrollEnabled={true}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={{ paddingRight: 4 }}
+              persistentScrollbar={true}
+              indicatorStyle={isDark ? 'white' : 'black'}
+              contentContainerStyle={{ paddingRight: 6 }}
             >
               <View style={{ gap: 6 }}>
                 {exerciseList.length === 0 ? (
@@ -677,34 +679,18 @@ export default function GymScreen() {
                 ) : (
                   exerciseList.map((ex, idx) => (
                     <View key={idx} style={[styles.exerciseListItem, { borderColor, backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
-                      {/* Reorder Up/Down Actions */}
-                      <View style={{ flexDirection: 'row', gap: 2, marginRight: 6 }}>
-                        <TouchableOpacity
-                          onPress={() => handleMoveExerciseUp(idx)}
-                          disabled={idx === 0}
-                          style={{ opacity: idx === 0 ? 0.3 : 1, padding: 2 }}
-                        >
-                          <Ionicons name="chevron-up" size={16} color={colors.primary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleMoveExerciseDown(idx)}
-                          disabled={idx === exerciseList.length - 1}
-                          style={{ opacity: idx === exerciseList.length - 1 ? 0.3 : 1, padding: 2 }}
-                        >
-                          <Ionicons name="chevron-down" size={16} color={colors.primary} />
-                        </TouchableOpacity>
+                      <View style={[styles.exerciseIndexBadge, { backgroundColor: colors.primaryLight }]}>
+                        <AppText style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>
+                          #{idx + 1}
+                        </AppText>
                       </View>
 
-                      <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginRight: 4 }}>
-                        #{idx + 1}
-                      </AppText>
-
-                      <AppText style={{ flex: 1, fontSize: 12, fontWeight: '500', color: colors.text }}>
+                      <AppText style={{ flex: 1, fontSize: 12, fontWeight: '600', color: colors.text, marginLeft: 8 }}>
                         {ex}
                       </AppText>
 
-                      <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 2 }}>
-                        <Ionicons name="close-circle" size={18} color={colors.danger} />
+                      <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
                       </TouchableOpacity>
                     </View>
                   ))
@@ -779,6 +765,7 @@ const styles = StyleSheet.create({
   exerciseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   btnAddExercise: { width: 42, height: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   exerciseListItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  exerciseIndexBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   emptyExerciseNotice: { padding: 12, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed' },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
