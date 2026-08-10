@@ -14,40 +14,74 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v6';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v7';
 
-// Memory cache for immediate UI responsiveness
-let globalTicketsMemory: SupportTicket[] = [];
+// Global memory cache to retain all created tickets across screens and platforms
+let globalTicketsMemory: SupportTicket[] = [
+  {
+    id: 't-demo-1',
+    userName: 'Gabriel Monte',
+    userEmail: 'gabriel@liferoutine.com',
+    subject: 'Sincronização do Banco de Dados PostgreSQL',
+    message: 'Solicito verificação da conexão de backup entre a VPS Oracle e o aplicativo.',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 /**
- * Fast, non-blocking fetch for support tickets
+ * Fetch all support tickets, merging local storage and memory
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   try {
-    let json: string | null = null;
+    let localJson: string | null = null;
+    let secureJson: string | null = null;
 
+    // Read from web localStorage if present
     if (typeof window !== 'undefined' && window.localStorage) {
-      json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
-    }
-
-    if (!json && Platform.OS !== 'web') {
       try {
-        json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+        localJson = window.localStorage.getItem(TICKETS_STORAGE_KEY);
       } catch (e) {}
     }
 
-    if (json) {
-      const parsed = JSON.parse(json);
+    // Read from mobile SecureStore if present
+    if (Platform.OS !== 'web') {
+      try {
+        secureJson = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      } catch (e) {}
+    }
+
+    const ticketMap = new Map<string, SupportTicket>();
+
+    // Add memory tickets first
+    globalTicketsMemory.forEach((t) => ticketMap.set(t.id, t));
+
+    // Merge web localStorage tickets
+    if (localJson) {
+      const parsed = JSON.parse(localJson);
       if (Array.isArray(parsed)) {
-        globalTicketsMemory = parsed;
-        return parsed;
+        parsed.forEach((t) => ticketMap.set(t.id, t));
       }
     }
+
+    // Merge mobile SecureStore tickets
+    if (secureJson) {
+      const parsed = JSON.parse(secureJson);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((t) => ticketMap.set(t.id, t));
+      }
+    }
+
+    const mergedList = Array.from(ticketMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    globalTicketsMemory = mergedList;
+    return mergedList;
   } catch (error) {
     console.warn('Failed to load tickets from local storage:', error);
+    return globalTicketsMemory;
   }
-
-  return globalTicketsMemory;
 }
 
 /**
@@ -93,17 +127,6 @@ export async function createSupportTicket(
 
     // Broadcast cross-platform event immediately
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
-
-    // Async background sync attempt to backend without blocking UI
-    setTimeout(async () => {
-      try {
-        await fetch('http://192.168.1.6:8081/api/tickets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newTicket),
-        }).catch(() => {});
-      } catch (e) {}
-    }, 10);
 
     return {
       success: true,
