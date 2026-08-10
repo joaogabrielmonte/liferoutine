@@ -1,7 +1,6 @@
 import { Platform, DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { getUserProfile } from '@/services/storage';
-import { BACKEND_API_URL } from '@/services/supabase';
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved';
 
@@ -15,49 +14,31 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v5';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v6';
 
-// Shared memory store
+// Memory cache for immediate UI responsiveness
 let globalTicketsMemory: SupportTicket[] = [];
 
-// Dev API endpoints for real-time mobile to web ticket sync
-const getDevApiUrls = () => [
-  'http://192.168.1.6:8081/api/tickets',
-  'http://localhost:8081/api/tickets',
-  `${BACKEND_API_URL}/api/tickets`,
-];
-
 /**
- * Fetch all support tickets across storage and API endpoints
+ * Fast, non-blocking fetch for support tickets
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
-  // 1. Try fetching from dev API endpoints
-  for (const url of getDevApiUrls()) {
-    try {
-      const res = await fetch(url, { method: 'GET' }).catch(() => null);
-      if (res && res.ok) {
-        const remoteTickets = await res.json();
-        if (Array.isArray(remoteTickets) && remoteTickets.length > 0) {
-          globalTicketsMemory = remoteTickets;
-          return remoteTickets;
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 2. Try localStorage / SecureStore fallback
   try {
     let json: string | null = null;
+
     if (typeof window !== 'undefined' && window.localStorage) {
       json = window.localStorage.getItem(TICKETS_STORAGE_KEY);
     }
+
     if (!json && Platform.OS !== 'web') {
-      json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      try {
+        json = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      } catch (e) {}
     }
 
     if (json) {
       const parsed = JSON.parse(json);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         globalTicketsMemory = parsed;
         return parsed;
       }
@@ -70,7 +51,7 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
 }
 
 /**
- * Create new support ticket from mobile app or web
+ * Create new support ticket from mobile app or web instantly
  */
 export async function createSupportTicket(
   subject: string,
@@ -110,17 +91,19 @@ export async function createSupportTicket(
       } catch (e) {}
     }
 
-    // Send ticket POST request to API endpoints so Web receives it in real-time
-    for (const url of getDevApiUrls()) {
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTicket),
-      }).catch(() => {});
-    }
-
-    // Broadcast cross-platform event
+    // Broadcast cross-platform event immediately
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
+
+    // Async background sync attempt to backend without blocking UI
+    setTimeout(async () => {
+      try {
+        await fetch('http://192.168.1.6:8081/api/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTicket),
+        }).catch(() => {});
+      } catch (e) {}
+    }, 10);
 
     return {
       success: true,
@@ -160,15 +143,6 @@ export async function updateTicketStatus(
       try {
         await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
       } catch (e) {}
-    }
-
-    // Send status update PUT request to dev API endpoints
-    for (const url of getDevApiUrls()) {
-      fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: ticketId, status: newStatus }),
-      }).catch(() => {});
     }
 
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
