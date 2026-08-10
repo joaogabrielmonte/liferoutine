@@ -259,6 +259,20 @@ export default function TabLayout() {
             }}
           />
           <Tabs.Screen
+            name="gym"
+            options={{
+              title: 'Academia',
+              href: isWebLayout ? null : undefined,
+              tabBarIcon: ({ color, size, focused }) => (
+                <Ionicons
+                  name={focused ? 'barbell' : 'barbell-outline'}
+                  size={size}
+                  color={color}
+                />
+              ),
+            }}
+          />
+          <Tabs.Screen
             name="profile"
             options={{
               title: 'Perfil',
