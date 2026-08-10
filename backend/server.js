@@ -68,6 +68,15 @@ async function initTables() {
         status VARCHAR(50) DEFAULT 'open',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS workout_splits (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255),
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'Push',
+        exercises TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log('✅ Tabelas do PostgreSQL inicializadas com sucesso!');
   } catch (e) {
@@ -104,6 +113,51 @@ app.get('/health', async (req, res) => {
       service: 'LifeRoutine API',
       database: 'offline (using SQLite local fallback)',
     });
+  }
+});
+
+// Workout Splits PostgreSQL Endpoints
+app.get('/api/workout-splits', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM workout_splits ORDER BY created_at DESC');
+    const splits = result.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      exercises: typeof r.exercises === 'string' ? JSON.parse(r.exercises) : r.exercises,
+    }));
+    res.json(splits);
+  } catch (e) {
+    res.json([]);
+  }
+});
+
+app.post('/api/workout-splits', async (req, res) => {
+  const { id, name, category, exercises } = req.body;
+  const splitId = id || `s-${Date.now()}`;
+  const exercisesJson = JSON.stringify(Array.isArray(exercises) ? exercises : []);
+
+  try {
+    await pool.query(
+      `INSERT INTO workout_splits (id, name, category, exercises)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, category = EXCLUDED.category, exercises = EXCLUDED.exercises`,
+      [splitId, name || 'Novo Treino', category || 'Push', exercisesJson]
+    );
+    res.json({ success: true, id: splitId });
+  } catch (e) {
+    console.error('Save split error:', e);
+    res.status(500).json({ error: 'Erro ao salvar divisão no PostgreSQL' });
+  }
+});
+
+app.delete('/api/workout-splits/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM workout_splits WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao excluir divisão no PostgreSQL' });
   }
 });
 

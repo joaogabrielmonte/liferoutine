@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Platform,
+  Alert,
   DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ import { AppCard } from '@/components/atoms/AppCard';
 import { AppToast } from '@/components/atoms/AppToast';
 import { GymWorkoutCard } from '@/components/organisms/GymWorkoutCard';
 import { scheduleHabitReminder } from '@/services/notifications';
+import { BACKEND_API_URL } from '@/services/supabase';
 import * as SecureStore from 'expo-secure-store';
 import { Spacing, Radius } from '@/constants/theme';
 
@@ -117,6 +119,7 @@ export default function GymScreen() {
   }, []);
 
   const loadGymData = async () => {
+    // 1. Local Cache Read
     try {
       let splitsJson: string | null = null;
       let alarmsJson: string | null = null;
@@ -132,6 +135,30 @@ export default function GymScreen() {
       if (splitsJson) setSplits(JSON.parse(splitsJson));
       if (alarmsJson) setAlarms(JSON.parse(alarmsJson));
     } catch (e) {}
+
+    // 2. Fetch Live Remote PostgreSQL Splits from VPS Server
+    setTimeout(async () => {
+      try {
+        const urls = [`${BACKEND_API_URL}/api/workout-splits`, '/api/workout-splits'];
+        for (const url of urls) {
+          const res = await fetch(url).catch(() => null);
+          if (res && res.ok) {
+            const remoteSplits = await res.json();
+            if (Array.isArray(remoteSplits) && remoteSplits.length > 0) {
+              setSplits(remoteSplits);
+              const json = JSON.stringify(remoteSplits);
+              if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_SPLITS_KEY, json);
+              } else if (Platform.OS !== 'web') {
+                await SecureStore.setItemAsync(STORAGE_SPLITS_KEY, json);
+              }
+              DeviceEventEmitter.emit('liferoutine_splits_updated');
+              break;
+            }
+          }
+        }
+      } catch (e) {}
+    }, 10);
   };
 
   const saveSplits = async (list: CustomWorkoutSplit[]) => {
@@ -204,36 +231,75 @@ export default function GymScreen() {
       ? (customCategoryText.trim() || 'Outros')
       : selectedCategoryOption;
 
+    let targetSplit: CustomWorkoutSplit;
+
     if (editingSplitId) {
-      // Edit existing split
-      const updated = splits.map((s) => (s.id === editingSplitId ? {
-        ...s,
+      targetSplit = {
+        id: editingSplitId,
         name: newSplitName.trim(),
         category: finalCategory,
-        exercises: exerciseList.length > 0 ? exerciseList : s.exercises,
-      } : s));
+        exercises: exerciseList.length > 0 ? exerciseList : ['Exercício Padrão 4x10'],
+      };
+      const updated = splits.map((s) => (s.id === editingSplitId ? targetSplit : s));
       await saveSplits(updated);
       setToast({ visible: true, title: 'Treino Atualizado!', message: 'Sua divisão de treino foi editada com sucesso.', type: 'success' });
     } else {
-      // Add new split
-      const newSplit: CustomWorkoutSplit = {
+      targetSplit = {
         id: `s-${Date.now()}`,
         name: newSplitName.trim(),
         category: finalCategory,
         exercises: exerciseList.length > 0 ? exerciseList : ['Supino Reto 4x10', 'Desenvolvimento 3x12'],
       };
-      const updated = [newSplit, ...splits];
+      const updated = [targetSplit, ...splits];
       await saveSplits(updated);
       setToast({ visible: true, title: 'Treino Criado!', message: 'Sua divisão de treino personalizada foi salva.', type: 'success' });
     }
 
+    // Sync to PostgreSQL Database Server
+    setTimeout(() => {
+      const urls = [`${BACKEND_API_URL}/api/workout-splits`, '/api/workout-splits'];
+      for (const url of urls) {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(targetSplit),
+        }).catch(() => {});
+      }
+    }, 10);
+
     setIsSplitModalOpen(false);
   };
 
-  const handleDeleteSplit = async (id: string) => {
+  const confirmDeleteSplit = (id: string, name: string) => {
+    if (Platform.OS === 'web') {
+      const confirmWeb = window.confirm(`Deseja realmente excluir a divisão de treino "${name}"?`);
+      if (confirmWeb) {
+        executeDeleteSplit(id);
+      }
+    } else {
+      Alert.alert(
+        'Excluir Divisão de Treino',
+        `Deseja realmente excluir a divisão "${name}"?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Excluir', style: 'destructive', onPress: () => executeDeleteSplit(id) },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
+  const executeDeleteSplit = async (id: string) => {
     const updated = splits.filter((s) => s.id !== id);
     await saveSplits(updated);
-    setToast({ visible: true, title: 'Treino Removido', message: 'Divisão de treino excluída.', type: 'info' });
+    setToast({ visible: true, title: 'Treino Removido', message: 'Divisão de treino excluída com sucesso.', type: 'info' });
+
+    setTimeout(() => {
+      const urls = [`${BACKEND_API_URL}/api/workout-splits/${id}`, `/api/workout-splits/${id}`];
+      for (const url of urls) {
+        fetch(url, { method: 'DELETE' }).catch(() => {});
+      }
+    }, 10);
   };
 
   const handleAddAlarm = async () => {
@@ -279,7 +345,26 @@ export default function GymScreen() {
     await saveAlarms(updated);
   };
 
-  const handleDeleteAlarm = async (id: string) => {
+  const confirmDeleteAlarm = (id: string, title: string) => {
+    if (Platform.OS === 'web') {
+      const confirmWeb = window.confirm(`Deseja realmente excluir o alarme "${title}"?`);
+      if (confirmWeb) {
+        executeDeleteAlarm(id);
+      }
+    } else {
+      Alert.alert(
+        'Excluir Alarme',
+        `Deseja realmente excluir o alarme "${title}"?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Excluir', style: 'destructive', onPress: () => executeDeleteAlarm(id) },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
+  const executeDeleteAlarm = async (id: string) => {
     const updated = alarms.filter((a) => a.id !== id);
     await saveAlarms(updated);
     setToast({ visible: true, title: 'Alarme Removido', message: 'Lembrete excluído com sucesso.', type: 'info' });
@@ -366,39 +451,51 @@ export default function GymScreen() {
             </View>
 
             {splits.map((split) => (
-              <AppCard key={split.id} style={{ marginBottom: 12, padding: 14 }}>
-                <View style={styles.splitHeaderRow}>
-                  <View style={[styles.categoryBadge, { backgroundColor: 'rgba(255, 86, 48, 0.15)' }]}>
-                    <AppText style={{ color: '#FF5630', fontWeight: '700', fontSize: 11 }}>
-                      {split.category.toUpperCase()}
-                    </AppText>
-                  </View>
-                  <AppText style={{ flex: 1, fontWeight: '700', fontSize: 14, marginLeft: 8 }}>
-                    {split.name}
-                  </AppText>
-
-                  {/* Edit Split Button */}
-                  <TouchableOpacity onPress={() => handleOpenEditSplitModal(split)} style={{ padding: 4, marginRight: 4 }}>
-                    <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-
-                  {/* Delete Split Button */}
-                  <TouchableOpacity onPress={() => handleDeleteSplit(split.id)} style={{ padding: 4 }}>
-                    <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ marginTop: 8, gap: 4 }}>
-                  {split.exercises.map((ex, idx) => (
-                    <View key={idx} style={styles.exerciseRow}>
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#00875A" />
-                      <AppText style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 6 }}>
-                        {ex}
+              <TouchableOpacity
+                key={split.id}
+                onPress={() => handleOpenEditSplitModal(split)}
+                activeOpacity={0.85}
+              >
+                <AppCard style={{ marginBottom: 12, padding: 14 }}>
+                  <View style={styles.splitHeaderRow}>
+                    <View style={[styles.categoryBadge, { backgroundColor: 'rgba(255, 86, 48, 0.15)' }]}>
+                      <AppText style={{ color: '#FF5630', fontWeight: '700', fontSize: 11 }}>
+                        {split.category.toUpperCase()}
                       </AppText>
                     </View>
-                  ))}
-                </View>
-              </AppCard>
+                    <AppText style={{ flex: 1, fontWeight: '700', fontSize: 14, marginLeft: 8 }}>
+                      {split.name}
+                    </AppText>
+
+                    {/* Edit Icon */}
+                    <TouchableOpacity onPress={() => handleOpenEditSplitModal(split)} style={{ padding: 4, marginRight: 4 }}>
+                      <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+
+                    {/* Delete Icon with Explicit Confirmation */}
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        confirmDeleteSplit(split.id, split.name);
+                      }}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ marginTop: 8, gap: 4 }}>
+                    {split.exercises.map((ex, idx) => (
+                      <View key={idx} style={styles.exerciseRow}>
+                        <Ionicons name="checkmark-circle-outline" size={14} color="#00875A" />
+                        <AppText style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 6 }}>
+                          {ex}
+                        </AppText>
+                      </View>
+                    ))}
+                  </View>
+                </AppCard>
+              </TouchableOpacity>
             ))}
           </Animated.View>
         )}
@@ -442,7 +539,10 @@ export default function GymScreen() {
                     thumbColor="#FFF"
                   />
 
-                  <TouchableOpacity onPress={() => handleDeleteAlarm(alarm.id)} style={{ paddingLeft: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => confirmDeleteAlarm(alarm.id, alarm.title)}
+                    style={{ paddingLeft: 8 }}
+                  >
                     <Ionicons name="trash-outline" size={16} color={colors.danger} />
                   </TouchableOpacity>
                 </View>
@@ -454,7 +554,7 @@ export default function GymScreen() {
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
 
-      {/* CREATE / EDIT WORKOUT SPLIT MODAL WITH INTERACTIVE '+' BUTTON */}
+      {/* CREATE / EDIT WORKOUT SPLIT MODAL */}
       <Modal
         visible={isSplitModalOpen}
         animationType="fade"
