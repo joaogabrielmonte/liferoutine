@@ -14,7 +14,7 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v7';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v8';
 
 // Global memory cache to retain all created tickets across screens and platforms
 let globalTicketsMemory: SupportTicket[] = [
@@ -29,59 +29,71 @@ let globalTicketsMemory: SupportTicket[] = [
   },
 ];
 
+const getDevApiUrls = () => {
+  if (Platform.OS === 'web') {
+    return ['/api/tickets', 'http://localhost:8081/api/tickets'];
+  }
+  return [
+    'http://192.168.1.6:8081/api/tickets',
+    'http://10.0.2.2:8081/api/tickets',
+    'http://localhost:8081/api/tickets',
+  ];
+};
+
 /**
- * Fetch all support tickets, merging local storage and memory
+ * Fetch all support tickets, merging Metro API server, local storage and memory
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
-  try {
-    let localJson: string | null = null;
-    let secureJson: string | null = null;
+  const ticketMap = new Map<string, SupportTicket>();
 
-    // Read from web localStorage if present
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        localJson = window.localStorage.getItem(TICKETS_STORAGE_KEY);
-      } catch (e) {}
-    }
+  // 1. Add memory tickets first
+  globalTicketsMemory.forEach((t) => ticketMap.set(t.id, t));
 
-    // Read from mobile SecureStore if present
-    if (Platform.OS !== 'web') {
-      try {
-        secureJson = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
-      } catch (e) {}
-    }
-
-    const ticketMap = new Map<string, SupportTicket>();
-
-    // Add memory tickets first
-    globalTicketsMemory.forEach((t) => ticketMap.set(t.id, t));
-
-    // Merge web localStorage tickets
-    if (localJson) {
-      const parsed = JSON.parse(localJson);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((t) => ticketMap.set(t.id, t));
+  // 2. Fetch remote tickets from Metro /api/tickets server
+  for (const url of getDevApiUrls()) {
+    try {
+      const res = await fetch(url, { method: 'GET' }).catch(() => null);
+      if (res && res.ok) {
+        const apiTickets = await res.json();
+        if (Array.isArray(apiTickets)) {
+          apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
+        }
       }
-    }
-
-    // Merge mobile SecureStore tickets
-    if (secureJson) {
-      const parsed = JSON.parse(secureJson);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((t) => ticketMap.set(t.id, t));
-      }
-    }
-
-    const mergedList = Array.from(ticketMap.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    globalTicketsMemory = mergedList;
-    return mergedList;
-  } catch (error) {
-    console.warn('Failed to load tickets from local storage:', error);
-    return globalTicketsMemory;
+    } catch (e) {}
   }
+
+  // 3. Merge web localStorage tickets
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const localJson = window.localStorage.getItem(TICKETS_STORAGE_KEY);
+      if (localJson) {
+        const parsed = JSON.parse(localJson);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((t) => ticketMap.set(t.id, t));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 4. Merge mobile SecureStore tickets
+  if (Platform.OS !== 'web') {
+    try {
+      const secureJson = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
+      if (secureJson) {
+        const parsed = JSON.parse(secureJson);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((t) => ticketMap.set(t.id, t));
+        }
+      }
+    } catch (e) {}
+  }
+
+  const mergedList = Array.from(ticketMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  globalTicketsMemory = mergedList;
+  return mergedList;
 }
 
 /**
@@ -125,6 +137,17 @@ export async function createSupportTicket(
       } catch (e) {}
     }
 
+    // POST ticket to Metro API server so Web receives it in real-time
+    for (const url of getDevApiUrls()) {
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTicket),
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     // Broadcast cross-platform event immediately
     DeviceEventEmitter.emit('liferoutine_tickets_updated');
 
@@ -165,6 +188,17 @@ export async function updateTicketStatus(
     if (Platform.OS !== 'web') {
       try {
         await SecureStore.setItemAsync(TICKETS_STORAGE_KEY, jsonStr);
+      } catch (e) {}
+    }
+
+    // Send PUT request to Metro API server
+    for (const url of getDevApiUrls()) {
+      try {
+        fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: ticketId, status: newStatus }),
+        }).catch(() => {});
       } catch (e) {}
     }
 
