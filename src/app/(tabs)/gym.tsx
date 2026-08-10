@@ -659,42 +659,56 @@ export default function GymScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Added Exercise List with Reorder Controls (▲ / ▼) */}
-            <ScrollView style={{ maxHeight: 150, marginBottom: 12 }}>
+            {/* Added Exercise List Container (Expanded height & fixed smooth scroll) */}
+            <ScrollView
+              style={{ maxHeight: 260, minHeight: 120, marginBottom: 14 }}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingRight: 4 }}
+            >
               <View style={{ gap: 6 }}>
-                {exerciseList.map((ex, idx) => (
-                  <View key={idx} style={[styles.exerciseListItem, { borderColor, backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
-                    {/* Reorder Up/Down Actions */}
-                    <View style={{ flexDirection: 'row', gap: 2, marginRight: 6 }}>
-                      <TouchableOpacity
-                        onPress={() => handleMoveExerciseUp(idx)}
-                        disabled={idx === 0}
-                        style={{ opacity: idx === 0 ? 0.3 : 1, padding: 2 }}
-                      >
-                        <Ionicons name="chevron-up" size={16} color={colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleMoveExerciseDown(idx)}
-                        disabled={idx === exerciseList.length - 1}
-                        style={{ opacity: idx === exerciseList.length - 1 ? 0.3 : 1, padding: 2 }}
-                      >
-                        <Ionicons name="chevron-down" size={16} color={colors.primary} />
+                {exerciseList.length === 0 ? (
+                  <View style={[styles.emptyExerciseNotice, { borderColor }]}>
+                    <AppText variant="caption" color="textSecondary" style={{ textAlign: 'center', fontSize: 11 }}>
+                      Nenhum exercício adicionado ainda. Digite acima e clique em (+)
+                    </AppText>
+                  </View>
+                ) : (
+                  exerciseList.map((ex, idx) => (
+                    <View key={idx} style={[styles.exerciseListItem, { borderColor, backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+                      {/* Reorder Up/Down Actions */}
+                      <View style={{ flexDirection: 'row', gap: 2, marginRight: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => handleMoveExerciseUp(idx)}
+                          disabled={idx === 0}
+                          style={{ opacity: idx === 0 ? 0.3 : 1, padding: 2 }}
+                        >
+                          <Ionicons name="chevron-up" size={16} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleMoveExerciseDown(idx)}
+                          disabled={idx === exerciseList.length - 1}
+                          style={{ opacity: idx === exerciseList.length - 1 ? 0.3 : 1, padding: 2 }}
+                        >
+                          <Ionicons name="chevron-down" size={16} color={colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+
+                      <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginRight: 4 }}>
+                        #{idx + 1}
+                      </AppText>
+
+                      <AppText style={{ flex: 1, fontSize: 12, fontWeight: '500', color: colors.text }}>
+                        {ex}
+                      </AppText>
+
+                      <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 2 }}>
+                        <Ionicons name="close-circle" size={18} color={colors.danger} />
                       </TouchableOpacity>
                     </View>
-
-                    <AppText style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginRight: 4 }}>
-                      #{idx + 1}
-                    </AppText>
-
-                    <AppText style={{ flex: 1, fontSize: 12, fontWeight: '500', color: colors.text }}>
-                      {ex}
-                    </AppText>
-
-                    <TouchableOpacity onPress={() => handleRemoveExerciseFromList(idx)} style={{ padding: 2 }}>
-                      <Ionicons name="close-circle" size={18} color={colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                  ))
+                )}
               </View>
             </ScrollView>
 
@@ -765,6 +779,7 @@ const styles = StyleSheet.create({
   exerciseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   btnAddExercise: { width: 42, height: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   exerciseListItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  emptyExerciseNotice: { padding: 12, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed' },
   alarmRow: { flexDirection: 'row', alignItems: 'center' },
   alarmIconBox: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 },
