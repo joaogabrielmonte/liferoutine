@@ -8,6 +8,8 @@ import {
   Alert,
   Platform,
   TextInput,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +24,6 @@ import { AppToast } from '@/components/atoms/AppToast';
 import {
   requestNotificationPermissions,
   scheduleHabitReminder,
-  scheduleTestNotification,
   cancelAllNotifications,
 } from '@/services/notifications';
 import {
@@ -95,7 +96,8 @@ export default function ProfileScreen() {
   const [devTapCount, setDevTapCount] = useState(0);
   const [vpsPing, setVpsPing] = useState<'online' | 'offline' | 'checking'>('online');
 
-  // Support Ticket Form & Custom Toast State
+  // Support Ticket Modal & Form State
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [toast, setToast] = useState<{ visible: boolean; title: string; message?: string; type?: 'success' | 'error' | 'info' | 'warning' }>({ visible: false, title: '' });
@@ -137,6 +139,7 @@ export default function ProfileScreen() {
     if (res.success) {
       setTicketSubject('');
       setTicketMessage('');
+      setIsTicketModalOpen(false);
       setToast({
         visible: true,
         title: 'Chamado Aberto com Sucesso!',
@@ -268,7 +271,7 @@ export default function ProfileScreen() {
   }
 
   // -------------------------------------------------------------
-  // MOBILE APP USER PROFILE (UNTOUCHED FOR MOBILE)
+  // MOBILE APP USER PROFILE
   // -------------------------------------------------------------
   const totalHabitsCount = todayHabits.length;
   const completedHabitsCount = todayHabits.filter((h) => h.isCompletedToday).length;
@@ -427,7 +430,7 @@ export default function ProfileScreen() {
           </AppCard>
         </Animated.View>
 
-        {/* Support & Ticket Form Section - Directly rendered in Mobile Profile */}
+        {/* Support Ticket Action Row & Modal Opener */}
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <AppText
             variant="label"
@@ -436,49 +439,15 @@ export default function ProfileScreen() {
           >
             Suporte & Atendimento
           </AppText>
-          <AppCard style={{ padding: Spacing.base }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
-              <AppText style={{ fontWeight: '700', fontSize: 14 }}>
-                Enviar Chamado ao Administrador
-              </AppText>
-            </View>
-            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
-              Descreva sua dúvida ou problema técnico. O painel administrativo receberá seu chamado imediatamente.
-            </AppText>
-
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
-            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.textInput, { color: colors.text }]}
-                value={ticketSubject}
-                onChangeText={setTicketSubject}
-                placeholder="Ex: Problema de sincronização"
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
-            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
-              <TextInput
-                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
-                value={ticketMessage}
-                onChangeText={setTicketMessage}
-                placeholder="Descreva o que está ocorrendo..."
-                placeholderTextColor={colors.textTertiary}
-                multiline
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.btnSubmitTicket, { backgroundColor: colors.primary }]}
-              onPress={handleCreateTicketSubmit}
-              activeOpacity={0.8}
-            >
-              <AppText style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-                Enviar Chamado
-              </AppText>
-            </TouchableOpacity>
+          <AppCard>
+            <SettingRow
+              icon={<Ionicons name="chatbubbles-outline" size={18} color="#0052CC" />}
+              iconBg="rgba(0, 82, 204, 0.15)"
+              label="Abrir Chamado de Suporte"
+              subtitle="Notificar o painel administrativo sobre dúvidas ou problemas"
+              isLast
+              onPress={() => setIsTicketModalOpen(true)}
+            />
           </AppCard>
         </Animated.View>
 
@@ -516,6 +485,69 @@ export default function ProfileScreen() {
 
         <View style={{ height: Spacing['3xl'] }} />
       </ScrollView>
+
+      {/* Support Ticket Modal Sheet for Mobile Users */}
+      <Modal
+        visible={isTicketModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setIsTicketModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsTicketModalOpen(false)} />
+          <View style={[styles.modalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View style={styles.modalHeaderRow}>
+              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Abrir Chamado de Suporte</AppText>
+              <TouchableOpacity onPress={() => setIsTicketModalOpen(false)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={20} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={{ marginBottom: 12 }}>
+              Descreva sua dúvida ou problema técnico. O painel administrativo receberá a notificação imediatamente.
+            </AppText>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text }]}
+                value={ticketSubject}
+                onChangeText={setTicketSubject}
+                placeholder="Ex: Dúvida sobre o aplicativo"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
+            <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
+                value={ticketMessage}
+                onChangeText={setTicketMessage}
+                placeholder="Descreva o que está ocorrendo..."
+                placeholderTextColor={colors.textTertiary}
+                multiline
+              />
+            </View>
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.btnModal, { borderColor: colors.border }]}
+                onPress={() => setIsTicketModalOpen(false)}
+              >
+                <AppText style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancelar</AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.btnModal, { backgroundColor: colors.primary }]}
+                onPress={handleCreateTicketSubmit}
+              >
+                <AppText style={{ color: '#FFF', fontWeight: '700' }}>Enviar Chamado</AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <AppToast
         visible={toast.visible}
@@ -636,11 +668,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: 8,
   },
-  btnSubmitTicket: {
-    alignItems: 'center',
+  modalOverlay: {
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 16,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  btnModal: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
   },
 });

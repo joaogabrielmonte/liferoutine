@@ -714,13 +714,33 @@ const styles = StyleSheet.create({
   card: { padding: 20, borderRadius: 16, borderWidth: 1 },
   adminBadgeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 12, marginBottom: 4 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', height: 42, borderRadius: 8, borderWidth: 1.5, paddingHorizontal: 12 },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+          outlineColor: 'transparent',
+        } as any)
+      : {}),
+  },
   focusedGlow: {
     shadowColor: '#0052CC',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 3,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          boxShadow: '0 0 0 3px rgba(0, 82, 204, 0.25)',
+        } as any)
+      : {}),
   },
   errorGlow: {
     shadowColor: '#DE350B',
@@ -728,8 +748,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 3,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          boxShadow: '0 0 0 3px rgba(222, 53, 11, 0.25)',
+        } as any)
+      : {}),
   },
-  input: { flex: 1, marginLeft: 6, fontSize: 13 },
+  input: {
+    flex: 1,
+    marginLeft: 6,
+    fontSize: 13,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+          outlineColor: 'transparent',
+          boxShadow: 'none',
+        } as any)
+      : {}),
+  },
   errorFallback: { color: '#DE350B', fontSize: 11, marginTop: 2, fontWeight: '600' },
   rememberRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
   rememberLeft: { flexDirection: 'row', alignItems: 'center' },
