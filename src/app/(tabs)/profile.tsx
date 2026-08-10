@@ -9,7 +9,7 @@ import {
   Platform,
   TextInput,
   Modal,
-  Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -100,6 +100,7 @@ export default function ProfileScreen() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; title: string; message?: string; type?: 'success' | 'error' | 'info' | 'warning' }>({ visible: false, title: '' });
 
   const isWeb = Platform.OS === 'web';
@@ -109,9 +110,6 @@ export default function ProfileScreen() {
       getUserProfile().then(setProfile);
     }, [])
   );
-
-  const cardBg = isDark ? '#172B4D' : '#FFFFFF';
-  const borderColor = isDark ? '#253858' : '#DFE1E6';
 
   const testVpsConnection = async () => {
     setVpsPing('checking');
@@ -135,19 +133,27 @@ export default function ProfileScreen() {
       return;
     }
 
-    const res = await createSupportTicket(ticketSubject, ticketMessage);
-    if (res.success) {
+    setIsSubmittingTicket(true);
+    try {
+      const res = await createSupportTicket(ticketSubject, ticketMessage);
+      setIsSubmittingTicket(false);
+      setIsTicketModalOpen(false);
       setTicketSubject('');
       setTicketMessage('');
-      setIsTicketModalOpen(false);
-      setToast({
-        visible: true,
-        title: 'Chamado Aberto com Sucesso!',
-        message: 'Seu chamado foi enviado e já pode ser visualizado no Painel Admin.',
-        type: 'success',
-      });
-    } else {
-      setToast({ visible: true, title: 'Erro ao Enviar', message: res.message, type: 'error' });
+
+      if (res.success) {
+        setToast({
+          visible: true,
+          title: 'Chamado Enviado com Sucesso!',
+          message: 'Seu chamado foi gravado e notificado ao Painel Administrativo.',
+          type: 'success',
+        });
+      } else {
+        setToast({ visible: true, title: 'Erro ao Enviar', message: res.message, type: 'error' });
+      }
+    } catch (error) {
+      setIsSubmittingTicket(false);
+      setToast({ visible: true, title: 'Erro de Envio', message: 'Falha ao processar a requisição.', type: 'error' });
     }
   };
 
@@ -230,37 +236,6 @@ export default function ProfileScreen() {
                   Container Postgres Docker OK
                 </AppText>
               </View>
-            </View>
-          </Animated.View>
-
-          {/* Infra Actions */}
-          <Animated.View entering={FadeInDown.delay(120).duration(300)} style={[styles.vpsCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}>
-            <AppText style={{ fontWeight: '700', fontSize: 14, marginBottom: 12 }}>
-              Ações de Manutenção do Servidor
-            </AppText>
-
-            <View style={{ gap: 8 }}>
-              <TouchableOpacity
-                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
-                onPress={() => alert('Logs Nginx verificados: 0 erros de HTTPS.')}
-              >
-                <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
-                <AppText style={{ fontWeight: '600', fontSize: 13, marginLeft: 8, flex: 1 }}>
-                  Ver Logs do Nginx & Proxy
-                </AppText>
-                <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.btnRow, { borderColor: isDark ? '#1F2937' : '#E5E7EB' }]}
-                onPress={() => alert('Backup do banco de dados gerado com sucesso.')}
-              >
-                <Ionicons name="cloud-download-outline" size={16} color={colors.textSecondary} />
-                <AppText style={{ fontWeight: '600', fontSize: 13, marginLeft: 8, flex: 1 }}>
-                  Fazer Backup do Banco PostgreSQL
-                </AppText>
-                <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
             </View>
           </Animated.View>
 
@@ -493,11 +468,27 @@ export default function ProfileScreen() {
         transparent
         onRequestClose={() => setIsTicketModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setIsTicketModalOpen(false)} />
-          <View style={[styles.modalCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsTicketModalOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.modalCard,
+              { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border },
+            ]}
+            onPress={(e) => {
+              if (e && typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+              }
+            }}
+          >
             <View style={styles.modalHeaderRow}>
-              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>Abrir Chamado de Suporte</AppText>
+              <AppText variant="h3" style={{ fontSize: 16, fontWeight: '700' }}>
+                Abrir Chamado de Suporte
+              </AppText>
               <TouchableOpacity onPress={() => setIsTicketModalOpen(false)} style={{ padding: 4 }}>
                 <Ionicons name="close" size={20} color={colors.icon} />
               </TouchableOpacity>
@@ -507,7 +498,9 @@ export default function ProfileScreen() {
               Descreva sua dúvida ou problema técnico. O painel administrativo receberá a notificação imediatamente.
             </AppText>
 
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>ASSUNTO</AppText>
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>
+              ASSUNTO
+            </AppText>
             <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <TextInput
                 style={[styles.textInput, { color: colors.text }]}
@@ -518,7 +511,9 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>MENSAGEM / DETALHES</AppText>
+            <AppText variant="caption" color="textSecondary" style={styles.inputLabel}>
+              MENSAGEM / DETALHES
+            </AppText>
             <View style={[styles.inputBox, { backgroundColor: colors.background, borderColor: colors.border, height: 80 }]}>
               <TextInput
                 style={[styles.textInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]}
@@ -535,18 +530,27 @@ export default function ProfileScreen() {
                 style={[styles.btnModal, { borderColor: colors.border }]}
                 onPress={() => setIsTicketModalOpen(false)}
               >
-                <AppText style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancelar</AppText>
+                <AppText style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                  Cancelar
+                </AppText>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.btnModal, { backgroundColor: colors.primary }]}
+                style={[styles.btnModal, { backgroundColor: colors.primary, minWidth: 120, alignItems: 'center' }]}
                 onPress={handleCreateTicketSubmit}
+                disabled={isSubmittingTicket}
               >
-                <AppText style={{ color: '#FFF', fontWeight: '700' }}>Enviar Chamado</AppText>
+                {isSubmittingTicket ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <AppText style={{ color: '#FFFFFF', fontWeight: '700' }}>
+                    Enviar Chamado
+                  </AppText>
+                )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       <AppToast
@@ -599,13 +603,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailItem: {
-    padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: 12,
     borderRadius: 6,
     borderWidth: 1,
@@ -674,9 +671,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
     padding: 16,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
     width: '100%',
