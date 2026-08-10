@@ -15,9 +15,9 @@ export type SupportTicket = {
   createdAt: string;
 };
 
-const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v12';
+const TICKETS_STORAGE_KEY = 'liferoutine_tickets_v13';
 
-// In-memory ticket cache
+// In-memory ticket cache for 0ms instant initial rendering
 let globalTicketsMemory: SupportTicket[] = [
   {
     id: 't-1001',
@@ -39,40 +39,15 @@ let globalTicketsMemory: SupportTicket[] = [
   },
 ];
 
-const getDevApiUrls = () => [
-  `${BACKEND_API_URL}/api/tickets`,
-  'http://192.168.1.6:8081/api/tickets',
-  'http://localhost:8081/api/tickets',
-  '/api/tickets',
-];
-
 /**
- * Fetch all support tickets across remote PostgreSQL VPS API, local storage, and memory
+ * Fetch all support tickets with 0ms instant local render and parallel non-blocking VPS sync
  */
 export async function getSupportTickets(): Promise<SupportTicket[]> {
   const ticketMap = new Map<string, SupportTicket>();
 
-  // 1. Fetch live remote tickets from Oracle VPS Server PostgreSQL API first
-  for (const url of getDevApiUrls()) {
-    try {
-      const res = await fetch(url, { method: 'GET' }).catch(() => null);
-      if (res && res.ok) {
-        const apiTickets = await res.json();
-        if (Array.isArray(apiTickets)) {
-          apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
-        }
-      }
-    } catch (e) {}
-  }
+  // 1. Instantly populate from memory cache & local storage for 0ms initial render
+  globalTicketsMemory.forEach((t) => ticketMap.set(t.id, t));
 
-  // 2. Add in-memory tickets
-  globalTicketsMemory.forEach((t) => {
-    if (!ticketMap.has(t.id)) {
-      ticketMap.set(t.id, t);
-    }
-  });
-
-  // 3. Read from web localStorage
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const localJson = window.localStorage.getItem(TICKETS_STORAGE_KEY);
@@ -85,7 +60,6 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     } catch (e) {}
   }
 
-  // 4. Read from mobile SecureStore
   if (Platform.OS !== 'web') {
     try {
       const secureJson = await SecureStore.getItemAsync(TICKETS_STORAGE_KEY);
@@ -98,12 +72,38 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
     } catch (e) {}
   }
 
-  const mergedList = Array.from(ticketMap.values()).sort(
+  const initialList = Array.from(ticketMap.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  globalTicketsMemory = mergedList;
-  return mergedList;
+  // 2. Parallel non-blocking fetch to remote Oracle VPS PostgreSQL API (800ms max timeout)
+  setTimeout(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 800);
+
+      const urls = [`${BACKEND_API_URL}/api/tickets`, '/api/tickets'];
+      for (const url of urls) {
+        const res = await fetch(url, { signal: controller.signal }).catch(() => null);
+        if (res && res.ok) {
+          const apiTickets = await res.json();
+          if (Array.isArray(apiTickets) && apiTickets.length > 0) {
+            apiTickets.forEach((t: SupportTicket) => ticketMap.set(t.id, t));
+            const updatedList = Array.from(ticketMap.values()).sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            globalTicketsMemory = updatedList;
+            DeviceEventEmitter.emit('liferoutine_tickets_updated');
+            break;
+          }
+        }
+      }
+      clearTimeout(timeoutId);
+    } catch (e) {}
+  }, 10);
+
+  globalTicketsMemory = initialList;
+  return initialList;
 }
 
 /**
@@ -152,7 +152,8 @@ export async function createSupportTicket(
 
     // Asynchronously send ticket to Oracle VPS Server PostgreSQL API endpoints
     setTimeout(() => {
-      for (const url of getDevApiUrls()) {
+      const urls = [`${BACKEND_API_URL}/api/tickets`, '/api/tickets'];
+      for (const url of urls) {
         fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -202,7 +203,8 @@ export async function updateTicketStatus(
     }
 
     setTimeout(() => {
-      for (const url of getDevApiUrls()) {
+      const urls = [`${BACKEND_API_URL}/api/tickets`, '/api/tickets'];
+      for (const url of urls) {
         fetch(url, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
