@@ -484,15 +484,46 @@ export default function GymScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={{ marginTop: 8, gap: 4 }}>
-                    {split.exercises.map((ex, idx) => (
-                      <View key={idx} style={styles.exerciseRow}>
-                        <Ionicons name="checkmark-circle-outline" size={14} color="#00875A" />
-                        <AppText style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 6 }}>
-                          {ex}
-                        </AppText>
-                      </View>
-                    ))}
+                  {/* Horizontal Scrollable Carousel for Exercises */}
+                  <View style={{ marginTop: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <AppText variant="caption" color="textSecondary" style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+                        EXERCÍCIOS DA FICHA ({split.exercises.length})
+                      </AppText>
+                      <AppText variant="caption" style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>
+                        Deslize pro lado ➔
+                      </AppText>
+                    </View>
+
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                      nestedScrollEnabled
+                    >
+                      {split.exercises.map((ex, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.exerciseCardBadge,
+                            {
+                              backgroundColor: isDark ? '#091E42' : '#F4F5F7',
+                              borderColor,
+                            },
+                          ]}
+                        >
+                          <View style={[styles.exerciseNumberPill, { backgroundColor: colors.primaryLight }]}>
+                            <AppText style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>
+                              #{idx + 1}
+                            </AppText>
+                          </View>
+                          <MaterialCommunityIcons name="dumbbell" size={14} color="#FF5630" style={{ marginHorizontal: 4 }} />
+                          <AppText style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
+                            {ex}
+                          </AppText>
+                        </View>
+                      ))}
+                    </ScrollView>
                   </View>
                 </AppCard>
               </TouchableOpacity>
@@ -727,4 +758,17 @@ const styles = StyleSheet.create({
   inputBox: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, marginBottom: 8 },
   input: { fontSize: 13, paddingVertical: 8 },
   btnSubmitModal: { height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  exerciseCardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  exerciseNumberPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
 });
